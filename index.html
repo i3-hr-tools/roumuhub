@@ -1813,7 +1813,7 @@ function DUE_ICON_HTML(dc){
   return `<i class="${map[dc]||'fa-regular fa-calendar'}"></i>`;
 }
 
-let tasks = JSON.parse(localStorage.getItem('roumu_team_tasks')||'[]');
+let tasks = (JSON.parse(localStorage.getItem('roumu_team_tasks')||'[]')).map(t=>({...t,id:String(t.id)}));
 let _serverTs = localStorage.getItem('roumu_server_ts') || '';
 
 // 個人タスク（ログインユーザーごとに管理）
@@ -3493,15 +3493,16 @@ function init(){
 function loadDefaults(){
   const y=T.getFullYear(),m=pad(T.getMonth()+1);
   const mo=T.getMonth(),nm=pad(mo>10?1:mo+2),ny=mo>10?y+1:y;
+  const _t = Date.now();
   tasks=[
-    {id:1,title:'勤怠データ確認・修正',cat:'kyuyo',pri:'high',due:`${y}-${m}-15`,remind:'1',note:'打刻漏れ・遅刻早退の確認',rep:'monthly',status:'todo',assignee:'m1',approver:'',comments:[],files:[]},
-    {id:2,title:'給与計算',cat:'kyuyo',pri:'high',due:`${y}-${m}-20`,remind:'3',note:'勤怠締め後に開始',rep:'monthly',status:'inprogress',assignee:'m2',approver:'m1',comments:[],files:[]},
-    {id:3,title:'社会保険料の納付',cat:'kyuyo',pri:'high',due:`${y}-${m}-28`,remind:'3',note:'',rep:'monthly',status:'todo',assignee:'m1',approver:'',comments:[],files:[]},
-    {id:4,title:'源泉所得税の納付',cat:'kyuyo',pri:'high',due:`${ny}-${nm}-10`,remind:'3',note:'翌月10日まで',rep:'monthly',status:'todo',assignee:'m2',approver:'m1',comments:[],files:[]},
-    {id:5,title:'産休申請受付・手続き',cat:'sankyuiku',pri:'mid',due:`${y}-${m}-15`,remind:'3',note:'出産予定日の確認・社保手続き',rep:'',status:'review',assignee:'m3',approver:'m1',comments:[{id:'c1',userId:'m3',text:'手続き書類を確認しました。承認をお願いします。',at:'2026-04-18 14:30'}],files:[]},
-    {id:6,title:'育児休業給付金の申請',cat:'sankyuiku',pri:'high',due:`${y}-${m}-25`,remind:'7',note:'ハローワークへの申請期限を確認',rep:'',status:'todo',assignee:'m1',approver:'',comments:[],files:[]},
-    {id:7,title:'入社手続き（社保・雇用保険）',cat:'nyutai',pri:'high',due:`${y}-${m}-10`,remind:'3',note:'当月入社者分',rep:'monthly',status:'todo',assignee:'m3',approver:'m1',comments:[],files:[]},
-    {id:8,title:'退職者の離職票作成',cat:'nyutai',pri:'mid',due:`${y}-${m}-20`,remind:'3',note:'退職日から10日以内に発行',rep:'',status:'todo',assignee:'m3',approver:'',comments:[],files:[]},
+    {id:String(_t+1),title:'勤怠データ確認・修正',cat:'kyuyo',pri:'high',due:`${y}-${m}-15`,remind:'1',note:'打刻漏れ・遅刻早退の確認',rep:'monthly',status:'todo',assignee:'',approver:'',comments:[],files:[]},
+    {id:String(_t+2),title:'給与計算',cat:'kyuyo',pri:'high',due:`${y}-${m}-20`,remind:'3',note:'勤怠締め後に開始',rep:'monthly',status:'inprogress',assignee:'',approver:'',comments:[],files:[]},
+    {id:String(_t+3),title:'社会保険料の納付',cat:'kyuyo',pri:'high',due:`${y}-${m}-28`,remind:'3',note:'',rep:'monthly',status:'todo',assignee:'',approver:'',comments:[],files:[]},
+    {id:String(_t+4),title:'源泉所得税の納付',cat:'kyuyo',pri:'high',due:`${ny}-${nm}-10`,remind:'3',note:'翌月10日まで',rep:'monthly',status:'todo',assignee:'',approver:'',comments:[],files:[]},
+    {id:String(_t+5),title:'産休申請受付・手続き',cat:'sankyuiku',pri:'mid',due:`${y}-${m}-15`,remind:'3',note:'出産予定日の確認・社保手続き',rep:'',status:'review',assignee:'',approver:'',comments:[],files:[]},
+    {id:String(_t+6),title:'育児休業給付金の申請',cat:'sankyuiku',pri:'high',due:`${y}-${m}-25`,remind:'7',note:'ハローワークへの申請期限を確認',rep:'',status:'todo',assignee:'',approver:'',comments:[],files:[]},
+    {id:String(_t+7),title:'入社手続き（社保・雇用保険）',cat:'nyutai',pri:'high',due:`${y}-${m}-10`,remind:'3',note:'当月入社者分',rep:'monthly',status:'todo',assignee:'',approver:'',comments:[],files:[]},
+    {id:String(_t+8),title:'退職者の離職票作成',cat:'nyutai',pri:'mid',due:`${y}-${m}-20`,remind:'3',note:'退職日から10日以内に発行',rep:'',status:'todo',assignee:'',approver:'',comments:[],files:[]},
   ];
   saveTasks();
 }
@@ -3509,14 +3510,29 @@ function loadDefaults(){
 
 // ══ 自動保存（デバウンス付きGAS同期）══
 let _autoSyncTimer = null;
+let _isSyncing = false; // 同期中フラグ（競合防止）
+
+// ── 内部保存専用関数（scheduleAutoSyncを発火しない）──
+// applyLoadedData等「サーバーから受け取ったデータをlocalStorageに書く」際に使用
+function _saveTasksLocal(){ localStorage.setItem('roumu_team_tasks', JSON.stringify(tasks)); }
+function _saveMembersLocal(){ localStorage.setItem('team_members', JSON.stringify(MEMBERS)); }
+function _saveAnnualLocal(){ localStorage.setItem('annual_projects', JSON.stringify(annualProjects)); }
+
 function scheduleAutoSync() {
   if (!isGasEnabled()) return;
+  if (_isSyncing) return; // 同期中は自動保存をスキップ
   clearTimeout(_autoSyncTimer);
   _autoSyncTimer = setTimeout(async () => {
+    if (_isSyncing) return;
+    _isSyncing = true;
     const statusEl = document.getElementById('sync-status');
     if (statusEl) statusEl.textContent = '💾 自動保存中...';
-    await syncData(true, true);
-    if (statusEl) statusEl.textContent = '💾 ' + new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}) + ' 自動保存済';
+    try {
+      await syncData(true, true);
+      if (statusEl) statusEl.textContent = '💾 ' + new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}) + ' 自動保存済';
+    } finally {
+      _isSyncing = false;
+    }
   }, 3000);
 }
 function saveTasks(){
@@ -3770,6 +3786,8 @@ async function syncData(silent=false, uploadOnly=false){
     if(!silent) toast('⚠ GAS URLが未設定です。「管理 → 設定」から設定してください。',true);
     return;
   }
+  // 手動同期中は自動保存をブロック
+  _isSyncing = true;
   const btn=document.getElementById('sync-btn');
   btn.classList.add('syncing');btn.innerHTML='<span class="spin"></span> 同期中...';btn.disabled=true;
   setSyncStatus('同期中...');
@@ -3856,7 +3874,7 @@ async function syncData(silent=false, uploadOnly=false){
     renderAll();
     const now=new Date();
     setSyncStatus(`最終同期 ${pad(now.getHours())}:${pad(now.getMinutes())}`);
-    toast('✅ 同期完了 — タスク・メンバー・設定を3名で共有しました');
+    toast('✅ 同期完了 — タスク・メンバー・設定をチームメンバー全員で共有しました');
   }catch(e){
     setSyncStatus('同期失敗');
     const msg = e?.message || String(e) || '不明なエラー';
@@ -3872,15 +3890,22 @@ async function syncData(silent=false, uploadOnly=false){
     }
   }finally{
     hideLoading();
+    _isSyncing = false;
     btn.classList.remove('syncing');btn.innerHTML='🔄 同期';btn.disabled=false;
   }
 }
 
 // applyLoadedData: GASから取得したデータをローカルに反映するヘルパー
+// ※ 内部保存関数(_saveXxxLocal)を使用してscheduleAutoSyncの発火を防ぐ
 function applyLoadedData(data){
-  if(data.tasks){ tasks=data.tasks; saveTasks(); }
+  if(data.tasks){
+    // IDを文字列に統一してから保存
+    tasks = data.tasks.map(t => ({ ...t, id: String(t.id) }));
+    _saveTasksLocal();
+  }
   if(data.members && data.members.length){
-    MEMBERS=data.members; saveMembers();
+    MEMBERS = data.members.map(m => ({ ...m, id: String(m.id) }));
+    _saveMembersLocal();
     renderMemberList(); populateAssigneeSelects(); renderUserSelect();
   }
   if(data.meta){ applyMeta(data.meta); }
@@ -4040,7 +4065,7 @@ function setMemberFilt(id,el){
 
 // ══ 一括操作 ══
 function getCheckedIds(){
-  return [...document.querySelectorAll('.task-chk:checked')].map(el=>Number(el.dataset.id));
+  return [...document.querySelectorAll('.task-chk:checked')].map(el=>String(el.dataset.id));
 }
 
 function onTaskCheck(){
@@ -4071,7 +4096,7 @@ function onTaskCheck(){
 // 複製・削除ボタンクリックでチェックボックスモードに入り対象タスクを選択
 function enterSelectMode(e, taskId, action){
   if(e && e.stopPropagation) e.stopPropagation();
-  const chk = document.querySelector('.task-chk[data-id="'+taskId+'"]');
+  const chk = document.querySelector('.task-chk[data-id="'+String(taskId)+'"]');
   if(chk){ chk.checked = true; onTaskCheck(); }
   if(action === 'delete') bulkDelete();
   if(action === 'copy')   bulkDuplicate();
@@ -4115,7 +4140,7 @@ function bulkDuplicate(){
   const newTasks = ids.map(id => {
     const t = tasks.find(t=>t.id===id);
     if(!t) return null;
-    return { ...t, id: Date.now()+Math.random(), title: t.title+' (コピー)', status:'todo', comments:[], files:[] };
+    return { ...t, id: String(Date.now())+String(Math.random()).slice(2,7), title: t.title+' (コピー)', status:'todo', comments:[], files:[] };
   }).filter(Boolean);
   tasks.push(...newTasks);
   saveTasks(); renderAll();
@@ -6250,7 +6275,7 @@ function changeStatus(id,status){
       }));
       const newTask = {
         ...t,
-        id: Date.now()+Math.random(),
+        id: String(Date.now())+String(Math.random()).slice(2,7),
         due: nextDue,
         start: nextDueDate, // ② 開始日を次回日付に
         status: 'todo',
@@ -6505,12 +6530,29 @@ function pasteSubtask(parentId){
 }
 
 function jumpToView(type){
-  // カテゴリをすべてに戻してタスク一覧を表示
+  // まず明示的にmain-panelとlayoutを表示状態にする
+  const mainPanel = document.getElementById('main-panel');
+  const layout = document.querySelector('.layout');
+  const rightPanel = document.querySelector('.right-panel');
+  if(mainPanel){ mainPanel.style.display = ''; }
+  if(layout){ layout.style.display = 'grid'; }
+  if(rightPanel){ rightPanel.style.display = ''; }
+  // 他のパネルを非表示にする
+  ['news-panel','links-panel','docs-panel','admin-panel','archive-panel'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.style.display='none';
+  });
+  const annualPanel=document.getElementById('annual-panel');
+  if(annualPanel) annualPanel.style.display='none';
+
+  // カテゴリをすべてに戻す
+  majorCat='all'; filt='all';
+  document.querySelectorAll('.cat-tab').forEach(t=>t.classList.remove('active'));
   const allTab = document.querySelector('.cat-tab');
-  if(allTab) setMajorCat('all', allTab);
+  if(allTab) allTab.classList.add('active');
 
   if(type==='overdue'){
     view='all'; statusFilt='all'; overdueFilter=true;
+    document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));
   } else if(type==='today'){
     view='today'; statusFilt='all'; overdueFilter=false;
     document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -6528,8 +6570,7 @@ function jumpToView(type){
     if(nav) nav.classList.add('active');
   }
   renderTasks(); renderStats();
-  const main=document.getElementById('main-panel');
-  if(main) main.scrollTop=0;
+  if(mainPanel) mainPanel.scrollTop=0;
 }
 
 function renderTodaySummary(){
