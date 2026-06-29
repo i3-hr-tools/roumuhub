@@ -3714,8 +3714,23 @@ function doLogin(id){
   }
   renderAll();
   checkAlerts();
-  if(isGasEnabled()) syncData(true);
-  if(isGasEnabled()) fetchTodayGcal();
+  // ログイン時にGASから最新データを取得して反映
+  if(isGasEnabled()){
+    setSyncStatus('⏳ データ取得中...');
+    fetch(getGasUrl()+'?action=load', {redirect:'follow'})
+      .then(r=>r.json())
+      .then(data=>{
+        if(data && !data.error){
+          if(data.serverTs){ _serverTs=data.serverTs; localStorage.setItem('roumu_server_ts',_serverTs); }
+          applyLoadedData(data);
+          renderAll();
+          setSyncStatus('✅ ' + new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}) + ' 取得完了');
+        }
+      })
+      .catch(()=>setSyncStatus('⚠ データ取得失敗'));
+    fetchTodayGcal();
+    startAutoPoll();
+  }
 }
 
 function backToMemberSelect(){
