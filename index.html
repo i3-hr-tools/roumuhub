@@ -450,24 +450,14 @@ body.modal-open{overflow:hidden}
   </div>
   <div class="header-right">
     <span id="clock"></span>
-    <!-- Googleログイン状態表示 -->
-    <div id="g-login-btn" onclick="handleGoogleLogin()" style="display:flex;align-items:center;gap:6px;padding:5px 12px;background:#fff;border:1px solid var(--border);border-radius:20px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text2);transition:all .15s" title="Googleアカウントでログイン">
-      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:16px;height:16px">
-      <span id="g-login-label">Googleログイン</span>
-    </div>
-    <div id="g-user-badge" style="display:none;align-items:center;gap:7px;padding:5px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:20px">
-      <img id="g-avatar" style="width:22px;height:22px;border-radius:50%;object-fit:cover" src="">
-      <span id="g-user-name" style="font-size:12px;font-weight:600;color:var(--text)"></span>
-      <span onclick="handleGoogleLogout()" style="font-size:10px;color:var(--text3);cursor:pointer;margin-left:2px" title="ログアウト">✕</span>
-    </div>
-    <button class="sync-btn" onclick="gDriveSync()" id="drive-sync-btn" title="Googleドライブと同期" style="display:none">☁ 同期</button>
-    <span id="drive-sync-status" style="font-size:10px;color:var(--text3);font-family:var(--mono)"></span>
-    <div class="user-badge" onclick="switchUser()">
-      <div class="user-avatar" id="current-avatar">?</div>
-      <span class="user-name" id="current-name">選択中...</span>
+
+    <div class="user-badge" onclick="switchUser()" title="クリックでアカウント切替" id="google-user-badge">
+      <img id="google-avatar" style="width:22px;height:22px;border-radius:50%;object-fit:cover;display:none" src="">
+      <div class="user-avatar" id="current-avatar" style="display:none">?</div>
+      <span class="user-name" id="current-name">ログイン中...</span>
     </div>
     <button class="sync-btn" onclick="syncData()" id="sync-btn">🔄 同期</button>
-    <span id="sync-status" style="font-size:10px;color:rgba(255,255,255,.6);font-family:var(--mono)"></span>
+    <span id="sync-status" style="font-size:10px;color:var(--text2);font-family:var(--mono);white-space:nowrap"></span>
     <button class="btn btn-ghost-w" onclick="openTemplateModal()" style="font-size:11px" id="hdr-template-btn">📋 テンプレート</button>
     <button class="btn btn-ghost-w" onclick="openBulkAssigneeModal()" style="font-size:11px" title="担当者を一括変更">👤 担当者変更</button>
     <button class="btn btn-white" onclick="openModal()" id="hdr-add-btn">＋ タスク追加</button>
@@ -688,7 +678,7 @@ body.modal-open{overflow:hidden}
         </div>
       </div>
     </div>
-    <div class="select-mode-banner" id="select-mode-banner"><i class="fa-solid fa-check-double"></i><span id="select-mode-text">選択モード</span><span style="opacity:.85;font-weight:500">— 複製・削除する項目にチェックを入れてください</span></div>
+    <div class="select-mode-banner" id="select-mode-banner"><i class="fa-solid fa-check-double"></i><span id="select-mode-text">選択モード</span><span style="opacity:.85;font-weight:500">— 複製・削除する項目にチェックを入れてください</span><button onclick="cancelSelectMode()" style="margin-left:auto;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:5px;padding:3px 10px;font-size:11px;cursor:pointer;font-family:var(--font);font-weight:600">✕ 解除</button></div>
     <div id="task-container"></div>
   </main>
 
@@ -895,7 +885,7 @@ body.modal-open{overflow:hidden}
           <div style="font-size:14px;font-weight:700">🔌 GAS連携設定</div>
           <span id="gas-status-badge" style="font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:10px;font-weight:700"></span>
         </div>
-        <div style="font-size:12px;color:var(--text2);margin-bottom:14px">3名でタスク・設定を共有するためのGoogle Apps Script連携</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:14px">2名でタスク・設定を共有するためのGoogle Apps Script連携</div>
 
         <!-- GAS URL入力 -->
         <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
@@ -962,33 +952,12 @@ body.modal-open{overflow:hidden}
               <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px">⑤ URLをここに貼り付けて保存</div>
               <div style="font-size:11px;color:var(--text2);line-height:1.8">
                 コピーしたURLを上の入力欄に貼り付けて「保存」→「接続テスト」で確認してください。<br>
-                ✅ 接続成功 が表示されれば設定完了です。あとは「🔄 同期」ボタンで3名のデータが共有されます。
+                ✅ 接続成功 が表示されれば設定完了です。あとは「🔄 同期」ボタンで2名のデータが共有されます。
               </div>
             </div>
 
           </div>
         </details>
-      </div>
-
-      <!-- Googleドライブ連携 -->
-      <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:14px;box-shadow:var(--shadow-sm)">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-          <div style="font-size:14px;font-weight:700">☁ Googleドライブ連携</div>
-          <span id="drive-status-badge" style="font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:10px;font-weight:700;background:var(--surface2);color:var(--text3)">未接続</span>
-        </div>
-        <div style="font-size:12px;color:var(--text2);margin-bottom:14px">2名でデータを共有・同期します。ログイン後にデータの読み書きが可能になります。</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-primary" onclick="handleGoogleLogin()" style="font-size:12px">
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:14px;height:14px;margin-right:4px">Googleログイン
-          </button>
-          <button class="btn btn-ghost" onclick="gDriveLoad()" style="font-size:12px;border-color:var(--blue);color:var(--blue)">☁ ドライブから読込</button>
-          <button class="btn btn-ghost" onclick="gDriveSave()" style="font-size:12px;border-color:var(--green);color:var(--green)">☁ ドライブへ保存</button>
-        </div>
-        <div style="margin-top:10px;font-size:11px;color:var(--text3);background:var(--surface2);border-radius:7px;padding:8px 12px;line-height:1.7">
-          📌 「ドライブへ保存」を押すと全データが <code>roumuhub_data.json</code> としてGoogleドライブに保存されます。<br>
-          📌 別のPCや別のユーザーが「ドライブから読込」を押すと最新データが取得されます。<br>
-          📌 ヘッダーの「☁ 同期」ボタンで読込＋保存を一括で行えます。
-        </div>
       </div>
 
       <!-- バックアップ -->
@@ -1568,15 +1537,13 @@ const GAS_URL = 'YOUR_GAS_WEB_APP_URL_HERE';
 // ▼ スプレッドシートIDをここに貼り付けてください（GAS側でも設定）
 const SHEET_ID = 'YOUR_SPREADSHEET_ID_HERE';
 
-// ══ GOOGLE OAuth / Drive / Calendar 設定 ══
-// ▼ GCPのOAuthクライアントID（承認済みオリジン: https://script.google.com）
+// ══ GOOGLE OAuth 設定（GitHub Pages + GASスプレッドシート構成）══
+// ▼ GCPのOAuthクライアントID（承認済みオリジン: https://aitajiri0317.github.io）
 const GOOGLE_CLIENT_ID = '854356876888-o4cnprp3nm346qun6i6vav61fum51mgu.apps.googleusercontent.com';
-const DRIVE_SCOPES = 'email profile https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar';
-const DRIVE_DATA_FILENAME = 'roumuhub_data.json'; // Driveに保存するファイル名
+const LOGIN_SCOPES = 'email profile';
 
 let gTokenClient = null;
 let gAccessToken = null;
-let gDriveFileId = null; // キャッシュされたファイルID
 
 // ── Google Identity Services 初期化 ──
 function initGoogleAuth() {
@@ -1586,202 +1553,15 @@ function initGoogleAuth() {
   }
   gTokenClient = google.accounts.oauth2.initTokenClient({
     client_id: GOOGLE_CLIENT_ID,
-    scope: DRIVE_SCOPES,
+    scope: LOGIN_SCOPES,
     callback: (tokenResponse) => {
       if (tokenResponse.error) {
         toast('⚠ Googleログインに失敗しました', true);
         return;
       }
       gAccessToken = tokenResponse.access_token;
-      fetchGoogleUserInfo();
     },
   });
-}
-
-// ── Googleログイン処理 ──
-function handleGoogleLogin() {
-  if (!gTokenClient) { toast('⚠ Google認証の初期化中です。しばらくお待ちください。', true); return; }
-  gTokenClient.requestAccessToken({ prompt: 'consent' });
-}
-
-// ── Googleログアウト処理 ──
-function handleGoogleLogout() {
-  if (gAccessToken) {
-    google.accounts.oauth2.revoke(gAccessToken, () => {});
-  }
-  gAccessToken = null;
-  gDriveFileId = null;
-  document.getElementById('g-login-btn').style.display = 'flex';
-  document.getElementById('g-user-badge').style.display = 'none';
-  document.getElementById('drive-sync-btn').style.display = 'none';
-  document.getElementById('drive-sync-status').textContent = '';
-  toast('Googleアカウントからログアウトしました');
-}
-
-// ── ログイン後にユーザー情報を取得して表示 ──
-async function fetchGoogleUserInfo() {
-  try {
-    const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: `Bearer ${gAccessToken}` }
-    });
-    const info = await res.json();
-    document.getElementById('g-login-btn').style.display = 'none';
-    document.getElementById('g-user-badge').style.display = 'flex';
-    document.getElementById('g-avatar').src = info.picture || '';
-    document.getElementById('g-user-name').textContent = info.name || info.email || '';
-    document.getElementById('drive-sync-btn').style.display = 'flex';
-    toast(`✅ ${info.name || info.email} でログインしました`);
-    // ログイン後に自動でDriveから最新データを読み込む
-    await gDriveLoad();
-  } catch(e) {
-    toast('⚠ ユーザー情報の取得に失敗しました', true);
-  }
-}
-
-// ── Driveのファイルを検索してIDを取得 ──
-async function findDriveFile() {
-  if (gDriveFileId) return gDriveFileId;
-  const res = await fetch(
-    `https://www.googleapis.com/drive/v3/files?q=name%3D'${DRIVE_DATA_FILENAME}'+and+trashed%3Dfalse&fields=files(id,name)`,
-    { headers: { Authorization: `Bearer ${gAccessToken}` } }
-  );
-  const data = await res.json();
-  if (data.files && data.files.length > 0) {
-    gDriveFileId = data.files[0].id;
-    return gDriveFileId;
-  }
-  return null;
-}
-
-// ── Driveからデータを読み込む ──
-async function gDriveLoad() {
-  if (!gAccessToken) return;
-  const status = document.getElementById('drive-sync-status');
-  status.textContent = '☁ 読込中...';
-  try {
-    const fileId = await findDriveFile();
-    if (!fileId) {
-      status.textContent = '☁ 初回: データなし';
-      toast('Googleドライブにデータがありません。保存ボタンで初回アップロードできます。');
-      return;
-    }
-    const res = await fetch(
-      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
-      { headers: { Authorization: `Bearer ${gAccessToken}` } }
-    );
-    const driveData = await res.json();
-    // データをlocalStorageとメモリに反映
-    applyDriveData(driveData);
-    status.textContent = `☁ ${new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})} 読込済`;
-    toast('☁ Googleドライブから最新データを読み込みました');
-  } catch(e) {
-    status.textContent = '☁ 読込失敗';
-    toast('⚠ ドライブからの読み込みに失敗しました', true);
-  }
-}
-
-// ── Driveにデータを保存する ──
-async function gDriveSave() {
-  if (!gAccessToken) { toast('⚠ Googleログインが必要です', true); return; }
-  const status = document.getElementById('drive-sync-status');
-  status.textContent = '☁ 保存中...';
-  try {
-    const payload = collectAllData();
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-    const fileId = await findDriveFile();
-    let res;
-    if (fileId) {
-      // 既存ファイルを更新
-      res = await fetch(
-        `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`,
-        { method: 'PATCH', headers: { Authorization: `Bearer ${gAccessToken}`, 'Content-Type': 'application/json' }, body: blob }
-      );
-    } else {
-      // 新規ファイルを作成（メタデータ + メディアのマルチパートアップロード）
-      const meta = JSON.stringify({ name: DRIVE_DATA_FILENAME, mimeType: 'application/json' });
-      const boundary = 'roumuhub_boundary';
-      const body = `--${boundary}\r\nContent-Type: application/json\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(payload)}\r\n--${boundary}--`;
-      res = await fetch(
-        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
-        { method: 'POST', headers: { Authorization: `Bearer ${gAccessToken}`, 'Content-Type': `multipart/related; boundary=${boundary}` }, body }
-      );
-      const newFile = await res.json();
-      gDriveFileId = newFile.id;
-    }
-    status.textContent = `☁ ${new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})} 保存済`;
-    toast('☁ Googleドライブに保存しました');
-  } catch(e) {
-    status.textContent = '☁ 保存失敗';
-    toast('⚠ ドライブへの保存に失敗しました', true);
-  }
-}
-
-// ── 同期（読込 → 保存）──
-async function gDriveSync() {
-  if (!gAccessToken) { handleGoogleLogin(); return; }
-  await gDriveLoad();
-  await gDriveSave();
-}
-
-// ── 全データをまとめてJSONオブジェクトに ──
-function collectAllData() {
-  return {
-    version: '4.9.3',
-    savedAt: new Date().toISOString(),
-    tasks: JSON.parse(localStorage.getItem('roumu_team_tasks') || '[]'),
-    members: JSON.parse(localStorage.getItem('team_members') || '[]'),
-    annualProjects: JSON.parse(localStorage.getItem('annual_projects') || '[]'),
-    docItems: JSON.parse(localStorage.getItem('doc_items') || '[]'),
-    linkItems: JSON.parse(localStorage.getItem('link_items') || '[]'),
-    linkCats: JSON.parse(localStorage.getItem('link_cats') || 'null'),
-    newsItems: JSON.parse(localStorage.getItem('news_items') || '[]'),
-    templates: JSON.parse(localStorage.getItem('roumu_templates') || '[]'),
-    approvalLog: JSON.parse(localStorage.getItem('roumu_approval_log') || '[]'),
-    gasUrl: localStorage.getItem('gas_url') || '',
-  };
-}
-
-// ── DriveのデータをlocalStorageとメモリに適用 ──
-function applyDriveData(data) {
-  if (!data || !data.version) return;
-  if (data.tasks)          { localStorage.setItem('roumu_team_tasks', JSON.stringify(data.tasks)); tasks = data.tasks; }
-  if (data.members)        { localStorage.setItem('team_members', JSON.stringify(data.members)); MEMBERS.length=0; data.members.forEach(m=>MEMBERS.push(m)); }
-  if (data.annualProjects) { localStorage.setItem('annual_projects', JSON.stringify(data.annualProjects)); annualProjects = data.annualProjects; }
-  if (data.docItems)       { localStorage.setItem('doc_items', JSON.stringify(data.docItems)); docItems = data.docItems; }
-  if (data.linkItems)      { localStorage.setItem('link_items', JSON.stringify(data.linkItems)); linkItems = data.linkItems; }
-  if (data.linkCats)       { localStorage.setItem('link_cats', JSON.stringify(data.linkCats)); linkCats = data.linkCats; }
-  if (data.templates)      { localStorage.setItem('roumu_templates', JSON.stringify(data.templates)); }
-  if (data.approvalLog)    { localStorage.setItem('roumu_approval_log', JSON.stringify(data.approvalLog)); }
-  if (data.gasUrl)         { localStorage.setItem('gas_url', data.gasUrl); }
-  // 画面を再描画
-  renderAll();
-  if (typeof renderAnnualProjects === 'function') renderAnnualProjects();
-  if (typeof renderDocList === 'function') renderDocList();
-  if (typeof renderLinkCatFilter === 'function') { renderLinkCatFilter(); renderLinks(); }
-  if (typeof renderMemberList === 'function') renderMemberList();
-}
-
-// ── Googleカレンダーにタスクを同期 ──
-async function syncTaskToGoogleCalendar(task) {
-  if (!gAccessToken) return;
-  if (!task.due || task.status === 'done') return;
-  try {
-    const dueDate = task.due.split('T')[0];
-    const event = {
-      summary: `[RomuHub] ${task.title}`,
-      description: task.note || '',
-      start: { date: dueDate },
-      end: { date: dueDate },
-      colorId: task.status === 'inprogress' ? '5' : '1',
-    };
-    await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${gAccessToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(event)
-    });
-  } catch(e) {
-    console.warn('Calendar sync failed:', e);
-  }
 }
 
 // ── アプリログイン用Googleログイン処理 ──
@@ -1854,13 +1634,16 @@ async function completeAppLogin() {
       }
     }
 
-    // ヘッダーのGoogleユーザー表示を更新
-    document.getElementById('g-login-btn').style.display = 'none';
-    document.getElementById('g-user-badge').style.display = 'flex';
-    document.getElementById('g-avatar').src = info.picture || '';
-    document.getElementById('g-user-name').textContent = info.name || email;
-    document.getElementById('drive-sync-btn').style.display = 'flex';
-
+    // ヘッダーにGoogleアバターを表示
+    const avatarEl = document.getElementById('google-avatar');
+    const initEl = document.getElementById('current-avatar');
+    if (avatarEl && info.picture) {
+      avatarEl.src = info.picture;
+      avatarEl.style.display = 'block';
+      if (initEl) initEl.style.display = 'none';
+    } else if (initEl) {
+      initEl.style.display = 'flex';
+    }
     // ツールにログイン
     doLogin(member.id);
 
@@ -2016,7 +1799,7 @@ const DEFAULT_MEMBERS = [
   {id:'m3', name:'メンバーC', color:'#6d3faa', initial:'C', email:'', calendarId:'primary', pin:''},
 ];
 let MEMBERS = JSON.parse(localStorage.getItem('team_members')||'null') || DEFAULT_MEMBERS;
-function saveMembers(){localStorage.setItem('team_members',JSON.stringify(MEMBERS));}
+function saveMembers(){localStorage.setItem('team_members',JSON.stringify(MEMBERS)); scheduleAutoSync();}
 
 // ══ STATE ══
 const HOL=['2026-01-01','2026-01-12','2026-02-11','2026-02-23','2026-03-20','2026-04-29',
@@ -3726,16 +3509,24 @@ function loadDefaults(){
   saveTasks();
 }
 
+
+// ══ 自動保存（デバウンス付きGAS同期）══
+let _autoSyncTimer = null;
+function scheduleAutoSync() {
+  if (!isGasEnabled()) return;
+  clearTimeout(_autoSyncTimer);
+  _autoSyncTimer = setTimeout(async () => {
+    const statusEl = document.getElementById('sync-status');
+    if (statusEl) statusEl.textContent = '💾 自動保存中...';
+    await syncData(true, true);
+    if (statusEl) statusEl.textContent = '💾 ' + new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}) + ' 自動保存済';
+  }, 3000);
+}
 function saveTasks(){
   localStorage.setItem('roumu_team_tasks',JSON.stringify(tasks));
-  // Googleドライブにログイン済みの場合は自動保存（デバウンス）
-  if(gAccessToken){ scheduleDriveSave(); }
+  scheduleAutoSync();
 }
-let _driveSaveTimer = null;
-function scheduleDriveSave(){
-  clearTimeout(_driveSaveTimer);
-  _driveSaveTimer = setTimeout(()=>{ gDriveSave(); }, 3000); // 3秒後に保存
-}
+
 
 // ══ LOGO ══
 function loadLogo(){
@@ -3850,8 +3641,11 @@ function doLogin(id){
   currentUser = MEMBERS.find(m=>m.id===id);
   document.getElementById('user-select-modal').classList.remove('open');
   document.getElementById('current-name').textContent = currentUser.name;
-  document.getElementById('current-avatar').textContent = currentUser.initial;
-  document.getElementById('current-avatar').style.background = currentUser.color;
+  const avatarEl = document.getElementById('current-avatar');
+  if (avatarEl) {
+    avatarEl.textContent = currentUser.initial;
+    avatarEl.style.background = currentUser.color;
+  }
   renderAll();
   checkAlerts();
   if(isGasEnabled()) syncData(true);
@@ -4280,6 +4074,13 @@ function enterSelectMode(e, taskId, action){
   if(action === 'copy')   bulkDuplicate();
 }
 
+function cancelSelectMode(){
+  document.querySelectorAll('.task-chk').forEach(el => el.checked = false);
+  onTaskCheck();
+  const allChk = document.getElementById('select-all-chk');
+  if(allChk) allChk.checked = false;
+}
+
 function toggleSelectAll(checked){
   document.querySelectorAll('.task-chk').forEach(el => el.checked = checked);
   onTaskCheck();
@@ -4326,7 +4127,7 @@ function bulkDuplicate(){
 // ══ ① 期限バナー通知 ══
 // ══ 年次プロジェクト ══
 let annualProjects = JSON.parse(localStorage.getItem('annual_projects')||'[]');
-function saveAnnualProjects(){ localStorage.setItem('annual_projects', JSON.stringify(annualProjects)); if(gAccessToken){ scheduleDriveSave(); } }
+function saveAnnualProjects(){ localStorage.setItem('annual_projects', JSON.stringify(annualProjects)); scheduleAutoSync(); }
 
 const ANNUAL_STATUS_LABELS = {todo:'未着手', inprogress:'進行中', done:'完了'};
 const ANNUAL_STATUS_COLORS = {todo:'#94a3b8', inprogress:'#f59e0b', done:'#10b981'};
