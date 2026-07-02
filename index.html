@@ -1189,6 +1189,18 @@ body.modal-open{overflow:hidden}
       <button class="btn btn-ghost" onclick="closeModal('modal-overlay')">キャンセル</button>
       <button class="btn btn-primary" onclick="saveTask()">保存</button>
     </div>
+    <!-- コメントセクション（編集時のみ表示） -->
+    <div id="modal-comment-section" style="display:none;margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
+      <input type="hidden" id="cm-task-id">
+      <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:10px">💬 コメント</div>
+      <div id="cm-list" style="max-height:200px;overflow-y:auto;margin-bottom:10px"></div>
+      <div style="display:flex;gap:6px">
+        <textarea id="cm-input" class="form-input" rows="2" placeholder="コメントを入力..."
+          style="flex:1;resize:none;font-size:12px"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();addCommentToTask();}"></textarea>
+        <button onclick="addCommentToTask()" class="btn btn-primary" style="align-self:flex-end;font-size:12px;padding:8px 12px">送信</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -5172,10 +5184,10 @@ function renderComments(t){
 }
 
 function addCommentToTask(){
-  const taskId = parseInt(document.getElementById('cm-task-id').value);
+  const taskId = String(document.getElementById('cm-task-id').value);
   const text = document.getElementById('cm-input').value.trim();
   if(!text){ toast('⚠ コメントを入力してください',true); return; }
-  const t = tasks.find(x=>x.id===taskId);
+  const t = tasks.find(x=>String(x.id)===taskId);
   if(!t) return;
   if(!t.comments) t.comments = [];
   t.comments.push({
@@ -5185,7 +5197,7 @@ function addCommentToTask(){
   });
   saveTasks(); renderComments(t);
   document.getElementById('cm-input').value = '';
-  if(isGasEnabled()) syncData(true, true);
+  if(isGasEnabled()) immediateSync();
 }
 
 function deleteTaskComment(taskId, idx){
@@ -5193,7 +5205,7 @@ function deleteTaskComment(taskId, idx){
   if(!t||!t.comments) return;
   t.comments.splice(idx,1);
   saveTasks(); renderComments(t);
-  if(isGasEnabled()) syncData(true, true);
+  if(isGasEnabled()) immediateSync();
 }
 
 
@@ -8937,8 +8949,11 @@ function onShareChange(){
 }
 
 function openModal(){
-  editId=null;editFiles=[];
-  document.getElementById('modal-title').textContent='タスクを追加';
+  // 編集モードの場合（editIdが既にセットされている）はリセットしない
+  if(!editId){
+    editId=null;editFiles=[];
+  }
+  document.getElementById('modal-title').textContent=editId?'タスクを編集':'タスクを追加';
   ['f-title','f-note','f-file-url','f-file-name','f-start'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('f-cat').value='kyuyo';
   const drEl=document.getElementById('f-deadline-rule');if(drEl)drEl.value='fixed';
@@ -8961,6 +8976,14 @@ function openModal(){
   toggleRepOptions();
   const dde=document.getElementById('f-due-date'); if(dde)dde.value='';
   const dte=document.getElementById('f-due-time'); if(dte)dte.value='17:00';
+  // 新規作成時はコメントセクションを非表示
+  const cmSection = document.getElementById('modal-comment-section');
+  if(cmSection) cmSection.style.display = 'none';
+  // 詳細設定を閉じた状態にリセット
+  const detailBody = document.getElementById('modal-detail-body');
+  const detailArrow = document.getElementById('modal-detail-arrow');
+  if(detailBody) detailBody.style.display = 'none';
+  if(detailArrow) detailArrow.style.transform = 'rotate(0deg)';
   document.getElementById('modal-overlay').classList.add('open');
 }
 function closeModal(id){document.getElementById(id).classList.remove('open')}
@@ -9045,6 +9068,8 @@ function saveTask(){
     autoSyncTaskToCalendar(savedTask);
   }
   // scheduleAutoSyncが3秒後に自動アップロードするため個別のsyncData不要
+  // 削除・ステータス変更の場合は即時同期
+  if(editId && isGasEnabled()) immediateSync();
 }
 
 function copyTask(e,id){
@@ -9089,8 +9114,21 @@ function editTask(e,id){
   const shareEl = document.getElementById(t.isPrivate?'f-share-private':'f-share-team');
   if(shareEl){ shareEl.checked=true; onShareChange(); }
   renderEditFiles();
-  // 右パネルで編集表示
-  openEditInPanel(id);
+  // コメントセクションを表示してデータをセット
+  const cmSection = document.getElementById('modal-comment-section');
+  const cmTaskId = document.getElementById('cm-task-id');
+  if(cmSection) cmSection.style.display = 'block';
+  if(cmTaskId) cmTaskId.value = String(id);
+  renderComments(t);
+  // 詳細設定を開いた状態にする（編集時は全項目を見せる）
+  const detailBody = document.getElementById('modal-detail-body');
+  const detailArrow = document.getElementById('modal-detail-arrow');
+  if(detailBody) detailBody.style.display = 'block';
+  if(detailArrow) detailArrow.style.transform = 'rotate(90deg)';
+  // モーダルを開く（右パネルではなくモーダル形式に統一）
+  // ※ openModal()はeditId=nullにリセットするためここでは直接開く
+  document.getElementById('modal-title').textContent = 'タスクを編集';
+  document.getElementById('modal-overlay').classList.add('open');
 }
 
 function delTask(e,id){
