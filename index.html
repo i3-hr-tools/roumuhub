@@ -2983,11 +2983,15 @@ async function syncMemberCalendar(memberId){
   if(!myTasks.length){toast('⚠ 同期するタスクがありません',true);return;}
   toast(`🔄 ${m.name}のタスクを同期中...`);
   try{
-    const res=await fetch(getGasUrl(),{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'syncCalendar',memberId,email:m.email,calendarId:m.calendarId||'primary',tasks:myTasks})
-    });
+    // FormData形式でtokenを含めてPOST
+    const fd = new FormData();
+    fd.append('action', 'syncCalendar');
+    fd.append('memberId', memberId);
+    fd.append('email', m.email);
+    fd.append('calendarId', m.calendarId||'primary');
+    fd.append('tasks', JSON.stringify(myTasks));
+    if(gAccessToken) fd.append('token', gAccessToken);
+    const res=await fetch(getGasUrl(),{method:'POST',body:fd,redirect:'follow'});
     const data=await res.json();
     if(data.success){toast(`✅ ${m.name}のカレンダーに${myTasks.length}件を同期しました`);}
     else{toast('⚠ 同期に失敗しました',true);}
