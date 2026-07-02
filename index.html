@@ -2983,15 +2983,20 @@ async function syncMemberCalendar(memberId){
   if(!myTasks.length){toast('⚠ 同期するタスクがありません',true);return;}
   toast(`🔄 ${m.name}のタスクを同期中...`);
   try{
-    // FormData形式でtokenを含めてPOST
-    const fd = new FormData();
-    fd.append('action', 'syncCalendar');
-    fd.append('memberId', memberId);
-    fd.append('email', m.email);
-    fd.append('calendarId', m.calendarId||'primary');
-    fd.append('tasks', JSON.stringify(myTasks));
-    if(gAccessToken) fd.append('token', gAccessToken);
-    const res=await fetch(getGasUrl(),{method:'POST',body:fd,redirect:'follow'});
+    // URLSearchParams形式でtokenを含めてPOST
+    const sp = new URLSearchParams();
+    sp.append('action', 'syncCalendar');
+    sp.append('memberId', memberId);
+    sp.append('email', m.email);
+    sp.append('calendarId', m.calendarId||'primary');
+    sp.append('tasks', JSON.stringify(myTasks));
+    if(gAccessToken) sp.append('token', gAccessToken);
+    const res=await fetch(getGasUrl(),{
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:sp.toString(),
+      redirect:'follow'
+    });
     const data=await res.json();
     if(data.success){toast(`✅ ${m.name}のカレンダーに${myTasks.length}件を同期しました`);}
     else{toast('⚠ 同期に失敗しました',true);}
@@ -3946,13 +3951,19 @@ async function syncData(silent=false, uploadOnly=false){
     const gasUrl = getGasUrl();
 
     async function gasPost(params){
-      const fd = new FormData();
+      // URLSearchParams形式（application/x-www-form-urlencoded）でGASに送信
+      const sp = new URLSearchParams();
       // SEC-01: OAuthトークンをGASに送信してサーバー側で検証
-      if (gAccessToken) fd.append('token', gAccessToken);
+      if (gAccessToken) sp.append('token', gAccessToken);
       Object.entries(params).forEach(([k,v])=>
-        fd.append(k, typeof v==='string' ? v : JSON.stringify(v))
+        sp.append(k, typeof v==='string' ? v : JSON.stringify(v))
       );
-      const res = await fetch(gasUrl, { method:'POST', body:fd, redirect:'follow' });
+      const res = await fetch(gasUrl, {
+        method:'POST',
+        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body:sp.toString(),
+        redirect:'follow'
+      });
       if(!res.ok) throw new Error(`HTTP ${res.status}`);
       const text = await res.text();
       try{ return JSON.parse(text); }
@@ -5949,7 +5960,7 @@ function cardHTML(t){
       </div>
     </div>`;
   return `<div class="task-card status-${t.status}" id="card-${t.id}"
-    onclick="toggleCard(${t.id})"
+    onclick="toggleCard(${t.id},event)"
     onkeydown="handleCardKey(event,${t.id})">
     <div class="task-card-top">
       <!-- チェックボックス -->
@@ -6088,18 +6099,19 @@ function stRowHTML(parentId,s){
   </div>`;
 }
 
-function toggleCard(id){
+function toggleCard(id, event){
   // チェックボックスやボタンからのクリックは上位で stopPropagation 済み
   // カードクリック → 編集モーダルをダイレクトに開く
   // （選択モードはチェックボックスの onchange のみで制御）
-  const e = window.event || {};
+  const e = event || window.event || {};
   const target = e.target || e.srcElement;
-  // チェックボックス・ボタン・入力要素のクリックは無視（念のため）
+  // チェックボックス・ボタン・入力要素のクリックは無視
   if(target && (target.tagName === 'INPUT' || target.tagName === 'BUTTON' ||
       target.tagName === 'A' || target.tagName === 'SELECT' ||
       target.tagName === 'TEXTAREA' || target.closest('.task-actions') ||
       target.closest('.quick-edit-bar') || target.closest('.subtask-inline'))) return;
-  editTask({stopPropagation:()=>{}}, id);
+  const syntheticEvent = {stopPropagation: ()=>{}};
+  editTask(syntheticEvent, id);
 }
 
 // ══ SUBTASK CRUD ══
@@ -6511,6 +6523,8 @@ function changeStatus(id,status){
   }
   renderAll();
   if(isGasEnabled()&&t.assignee&&t.due) autoSyncTaskToCalendar(t);
+  // ステータス変更は重要操作 → 即時同期
+  if(isGasEnabled()) immediateSync();
 }
 
 function addComment(id){
@@ -9144,7 +9158,7 @@ function saveTask(){
 
   if(editId){
     // 編集：チーム or 個人どちらにあるか探す
-    let t = tasks.find(t=>t.id===editId);
+    let t = tasks.find(t=>String(t.id)===String(editId));
     if(!t){
       const priv = getPrivateTasks();
       t = priv.find(t=>String(t.id)===String(editId));
@@ -9155,6 +9169,12 @@ function saveTask(){
         savedTask=t;
         closeModal('modal-overlay');renderAll();
         toast('🔒 個人タスクを保存しました');
+        // 個人タスクのカレンダー同期（自分のカレンダーのみ）
+        if(isGasEnabled()&&savedTask.due){
+          const selfMember = currentUser ? MEMBERS.find(m=>m.id===currentUser.id) : null;
+          if(selfMember && selfMember.email) autoSyncTaskToCalendar({...savedTask, assignee: selfMember.id});
+        }
+        if(isGasEnabled()) immediateSync();
         return;
       }
     } else {
@@ -9181,7 +9201,13 @@ function saveTask(){
       priv.push(savedTask);
       savePrivateTasks(priv);
       closeModal('modal-overlay');renderAll();
-      toast('🔒 個人タスクとして保存しました（同期されません）');
+      toast('🔒 個人タスクとして保存しました');
+      // 個人タスクのカレンダー同期（自分のカレンダーのみ）
+      if(isGasEnabled()&&savedTask.due){
+        const selfMemberNew = currentUser ? MEMBERS.find(m=>m.id===currentUser.id) : null;
+        if(selfMemberNew && selfMemberNew.email) autoSyncTaskToCalendar({...savedTask, assignee: selfMemberNew.id});
+      }
+      if(isGasEnabled()) immediateSync();
       return;
     }
     tasks.push(savedTask);
