@@ -2245,6 +2245,37 @@ function getCatPrefix(cat) {
   return map[cat] || '【その他】';
 }
 
+// 土日・祝日判定（日本の祝日カレンダーを参照）
+function isHolidayOrWeekend(date) {
+  var day = date.getDay();
+  if (day === 0 || day === 6) return true;
+  var calHoliday = CalendarApp.getCalendarById('ja.japanese#holiday@group.v.calendar.google.com');
+  if (calHoliday) {
+    var events = calHoliday.getEventsForDay(date);
+    if (events.length > 0) return true;
+  }
+  return false;
+}
+
+// 指定日の前営業日を返す（土日祝をスキップ）
+function getPrevBizDay(date) {
+  var d = new Date(date);
+  d.setDate(d.getDate() - 1);
+  while (isHolidayOrWeekend(d)) {
+    d.setDate(d.getDate() - 1);
+  }
+  return d;
+}
+
+// 前営業日の午前9時のリマインダー分数を計算
+function calcPrevBizDayMins(dueDate) {
+  var prevBiz = getPrevBizDay(dueDate);
+  var dueMidnightJst  = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate(), 0, 0, 0);
+  var prevBiz9amJst   = new Date(prevBiz.getFullYear(), prevBiz.getMonth(), prevBiz.getDate(), 9, 0, 0);
+  var diffMs = dueMidnightJst.getTime() - prevBiz9amJst.getTime();
+  return Math.round(diffMs / 60000);
+}
+
 // ── エントリーポイント ─────────────────────────────────────────
 
 function doGet(e) {
@@ -2507,10 +2538,15 @@ function upsertTaskCalendar(task, member) {
       ev.setTitle(title);
       ev.setAllDayDate(dueDate);
       ev.setDescription(desc);
+      // 前営業日の午前9時にアラートを設定
+      ev.removeAllReminders();
+      ev.addPopupReminder(calcPrevBizDayMins(dueDate));
       existing.slice(1).forEach(function(e) { e.deleteEvent(); });
     } else {
       var newEv = cal.createAllDayEvent(title, dueDate, { description: desc, visibility: CalendarApp.Visibility.PRIVATE });
       newEv.setTag('roumu_task_id', String(task.id));
+      // 前営業日の午前9時にアラートを設定
+      newEv.addPopupReminder(calcPrevBizDayMins(dueDate));
     }
     return { ok: true };
   } catch(err) {
@@ -2550,6 +2586,8 @@ function syncCal(memberId, email, calendarId, tasks) {
       if (!existing.length) {
         var ev = cal.createAllDayEvent(title, d, { description: t.note || '', visibility: CalendarApp.Visibility.PRIVATE });
         ev.setTag('roumu_task_id', String(t.id));
+        // 前営業日の午前9時にアラートを設定
+        ev.addPopupReminder(calcPrevBizDayMins(d));
         synced++;
       }
     });
