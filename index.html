@@ -2038,6 +2038,7 @@ async function fetchTodayGcal(){
   try{
     const today = fmt(T);
     const params = new URLSearchParams({action:'calendar', date:today, calendarId:calId, email:email});
+    if(gAccessToken) params.append('token', gAccessToken);
     const res = await fetch(`${getGasUrl()}?${params}`);
     const data = await res.json();
     if(data.error) throw new Error(data.error);
