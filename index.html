@@ -8948,12 +8948,10 @@ function onShareChange(){
   }
 }
 
+// 新規タスク作成専用モーダルを開く（編集時は_openEditModalを使用）
 function openModal(){
-  // 編集モードの場合（editIdが既にセットされている）はリセットしない
-  if(!editId){
-    editId=null;editFiles=[];
-  }
-  document.getElementById('modal-title').textContent=editId?'タスクを編集':'タスクを追加';
+  editId=null;editFiles=[];
+  document.getElementById('modal-title').textContent='タスクを追加';
   ['f-title','f-note','f-file-url','f-file-name','f-start'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('f-cat').value='kyuyo';
   const drEl=document.getElementById('f-deadline-rule');if(drEl)drEl.value='fixed';
@@ -8966,7 +8964,6 @@ function openModal(){
   document.getElementById('f-assignee').value=currentUser?.id||'';
   document.getElementById('f-approver').value='';
   document.getElementById('f-file-list').innerHTML='';
-  // 共有設定リセット（デフォルト：チーム共有）
   const shareTeam = document.getElementById('f-share-team');
   if(shareTeam){ shareTeam.checked=true; onShareChange(); }
   populateLeavePersonSelect();
@@ -9022,7 +9019,7 @@ function saveTask(){
     let t = tasks.find(t=>t.id===editId);
     if(!t){
       const priv = getPrivateTasks();
-      t = priv.find(t=>t.id===editId);
+      t = priv.find(t=>String(t.id)===String(editId));
       if(t){
         Object.assign(t,v);
         if(!t.comments)t.comments=[];
@@ -9080,54 +9077,81 @@ function copyTask(e,id){
 
 function editTask(e,id){
   e.stopPropagation();
-  let t = tasks.find(t=>t.id===id);
+  // String型IDで検索（チームタスク → 個人タスクの順）
+  let t = tasks.find(t=>String(t.id)===String(id));
   let isPrivate = false;
   if(!t){
-    t = getPrivateTasks().find(t=>t.id===id);
+    t = getPrivateTasks().find(t=>String(t.id)===String(id));
     isPrivate = true;
   }
   if(!t) return;
-  editId=id;editFiles=[...(t.files||[])];
-  document.getElementById('modal-title').textContent='タスクを編集';
-  document.getElementById('f-title').value=t.title;
-  document.getElementById('f-cat').value=t.cat;
-  document.getElementById('f-start').value=t.start||'';
-  document.getElementById('f-due').value=t.due||'';
-  const dueParts=(t.due||'').split('T'); const dueDateEl=document.getElementById('f-due-date'); const dueTimeEl=document.getElementById('f-due-time'); if(dueDateEl)dueDateEl.value=dueParts[0]||''; if(dueTimeEl)dueTimeEl.value=dueParts[1]||'17:00';
-  const startEl=document.getElementById('f-start');if(startEl)startEl.value=t.start||'';
-  document.getElementById('f-remind').value=t.remind||'';
-  document.getElementById('f-note').value=t.note||'';
-  document.getElementById('f-rep').value=t.rep||'';
-  const repBizRestore=document.getElementById('f-rep-biz'); if(repBizRestore) repBizRestore.value=t.repBizDay||'';
+
+  // editIdをセット（openModal()を呼ばないため先にセット）
+  editId = String(id);
+  editFiles = [...(t.files||[])];
+
+  // フォームに値を流し込む
+  document.getElementById('modal-title').textContent = 'タスクを編集';
+  document.getElementById('f-title').value = t.title || '';
+  document.getElementById('f-cat').value = t.cat || 'other';
+  document.getElementById('f-status').value = t.status || 'todo';
+  document.getElementById('f-remind').value = t.remind || '';
+  document.getElementById('f-note').value = t.note || '';
+  document.getElementById('f-rep').value = t.rep || '';
+
+  const startEl = document.getElementById('f-start');
+  if(startEl) startEl.value = t.start || '';
+
+  // 期限日時
+  const dueParts = (t.due || '').split('T');
+  const dueDateEl = document.getElementById('f-due-date');
+  const dueTimeEl = document.getElementById('f-due-time');
+  const dueHiddenEl = document.getElementById('f-due');
+  if(dueDateEl) dueDateEl.value = dueParts[0] || '';
+  if(dueTimeEl) dueTimeEl.value = (dueParts[1] || '17:00').substring(0, 5);
+  if(dueHiddenEl) dueHiddenEl.value = t.due || '';
+
+  // 繰り返し設定
+  const repBizEl = document.getElementById('f-rep-biz');
+  if(repBizEl) repBizEl.value = t.repBizDay || '';
   toggleRepOptions();
-  const drEl2=document.getElementById('f-deadline-rule');if(drEl2)drEl2.value=t.deadlineRule||'fixed';
-  previewDeadlineRule();
-  document.getElementById('f-status').value=t.status||'todo';
-  // selectの選択肢を最新MEMBERSで再構築してからvalueをセット
+
+  // 期限ルール
+  const drEl = document.getElementById('f-deadline-rule');
+  if(drEl) drEl.value = t.deadlineRule || 'fixed';
+  if(typeof previewDeadlineRule === 'function') previewDeadlineRule();
+
+  // 担当者・承認者
   populateAssigneeSelects();
-  document.getElementById('f-assignee').value=t.assignee||'';
-  document.getElementById('f-approver').value=t.approver||'';
-  populateLeavePersonSelect(t.leavePersonLink||'');
-  const scopeEl = document.getElementById(t.private?'f-scope-private':'f-scope-team');
-  if(scopeEl){ scopeEl.checked=true; updateScopeStyle(); }
-  // 共有設定（チーム共有 / 個人のみ）を復元
-  const shareEl = document.getElementById(t.isPrivate?'f-share-private':'f-share-team');
-  if(shareEl){ shareEl.checked=true; onShareChange(); }
+  document.getElementById('f-assignee').value = t.assignee || '';
+  document.getElementById('f-approver').value = t.approver || '';
+  populateLeavePersonSelect(t.leavePersonLink || '');
+
+  // 公開範囲
+  const scopeEl = document.getElementById(t.private ? 'f-scope-private' : 'f-scope-team');
+  if(scopeEl){ scopeEl.checked = true; updateScopeStyle(); }
+
+  // 共有設定
+  const shareEl = document.getElementById(t.isPrivate ? 'f-share-private' : 'f-share-team');
+  if(shareEl){ shareEl.checked = true; onShareChange(); }
+
+  // ファイル添付
   renderEditFiles();
-  // コメントセクションを表示してデータをセット
+
+  // 詳細設定を開いた状態にする
+  const detailBody = document.getElementById('modal-detail-body');
+  const detailArrow = document.getElementById('modal-detail-arrow');
+  if(detailBody) detailBody.style.display = 'block';
+  if(detailArrow) detailArrow.style.transform = 'rotate(90deg)';
+
+  // コメントセクションを表示
   const cmSection = document.getElementById('modal-comment-section');
   const cmTaskId = document.getElementById('cm-task-id');
   if(cmSection) cmSection.style.display = 'block';
   if(cmTaskId) cmTaskId.value = String(id);
   renderComments(t);
-  // 詳細設定を開いた状態にする（編集時は全項目を見せる）
-  const detailBody = document.getElementById('modal-detail-body');
-  const detailArrow = document.getElementById('modal-detail-arrow');
-  if(detailBody) detailBody.style.display = 'block';
-  if(detailArrow) detailArrow.style.transform = 'rotate(90deg)';
-  // モーダルを開く（右パネルではなくモーダル形式に統一）
-  // ※ openModal()はeditId=nullにリセットするためここでは直接開く
-  document.getElementById('modal-title').textContent = 'タスクを編集';
+
+  // モーダルを直接開く（openModal()はeditId=nullにリセットするため呼ばない）
   document.getElementById('modal-overlay').classList.add('open');
 }
 
