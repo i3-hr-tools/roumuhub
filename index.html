@@ -1031,7 +1031,7 @@ body.modal-open{overflow:hidden}
       </div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label class="form-label">開始日</label><input class="form-input" id="f-start" type="date"></div>
+      <div class="form-group"><label class="form-label">開始日</label><input class="form-input" id="f-start" type="date" onchange="onStartDateChange()" oninput="onStartDateChange()"></div>
       <div class="form-group">
         <label class="form-label">期限日時</label>
         <div style="display:flex;gap:8px;align-items:center">
@@ -2281,13 +2281,15 @@ function calc3BizDaysAgo9amMins(dueDate) {
   var target = get3BizDaysAgo(dueDate);
   var dueMidnightJst = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate(), 0, 0, 0);
   var target9amJst   = new Date(target.getFullYear(), target.getMonth(), target.getDate(), 9, 0, 0);
-  return Math.round((dueMidnightJst.getTime() - target9amJst.getTime()) / 60000);
+  var mins = Math.round((dueMidnightJst.getTime() - target9amJst.getTime()) / 60000);
+  return mins > 0 ? mins : 1;
 }
 function calcPrevBizDay3pmMins(dueDate) {
   var target = getPrevBizDay(dueDate);
   var dueMidnightJst = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate(), 0, 0, 0);
   var target3pmJst   = new Date(target.getFullYear(), target.getMonth(), target.getDate(), 15, 0, 0);
-  return Math.round((dueMidnightJst.getTime() - target3pmJst.getTime()) / 60000);
+  var mins = Math.round((dueMidnightJst.getTime() - target3pmJst.getTime()) / 60000);
+  return mins > 0 ? mins : 1;
 }
 
 // ── エントリーポイント ─────────────────────────────────────────
@@ -2403,6 +2405,7 @@ function dispatch(action, p) {
 
   // ── save（tasks のみ保存） ─────────────────────────────────
   if (action === 'save') {
+    checkAccess(p.token || '');
     saveSh(SHEET_TASKS, parseParam(p.tasks) || []);
     return j({ ok: true });
   }
@@ -3594,8 +3597,9 @@ function scheduleAutoSync() {
   clearTimeout(_autoSyncTimer);
   _autoSyncTimer = setTimeout(async () => {
     if (_isSyncing) return;
-    // 直近3秒以内に別の同期が完了していれば重複送信を回避
+    // 直近2.5秒以内に別の同期が完了していれば重複送信を回避
     if (Date.now() - _lastUploadTs < 2500) return;
+    _autoSyncTimer = null; // タイマークリア
     await _doUpload();
   }, 3000);
 }
@@ -3603,7 +3607,9 @@ function scheduleAutoSync() {
 // ── 削除用：即時アップロード（デバウンスなし）──
 async function immediateSync() {
   if (!isGasEnabled()) return;
+  if (_isSyncing) return; // 既に同期中なら重複防止
   clearTimeout(_autoSyncTimer); // デバウンス中のものをキャンセル
+  _autoSyncTimer = null;
   await _doUpload();
 }
 
@@ -3629,7 +3635,11 @@ function startAutoPoll() {
   _autoPollTimer = setInterval(async () => {
     if (!isGasEnabled() || _isSyncing) return;
     // BUG-01: モーダルが開いている場合は自動取得をスキップ（入力中のデータ保護）
+    // タスク編集モーダル・コメント入力・その他全モーダルをチェック
     if (document.querySelector('.modal-overlay.open')) return;
+    // コメント入力エリアにフォーカスがある場合もスキップ
+    const activeEl = document.activeElement;
+    if (activeEl && (activeEl.id === 'cm-input' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'INPUT')) return;
     try {
       const gasUrl = getGasUrl();
       const ownerEmail = currentUser ? (currentUser.email || '') : '';
@@ -4049,9 +4059,12 @@ function applyLoadedData(data){
   // 個人タスク：自分のものだけをlocalStorageに反映（厳格隔離）
   if(data.privateTasks && Array.isArray(data.privateTasks) && currentUser){
     const myEmail = currentUser.email || '';
-    // ownerEmailが自分と一致するものだけ反映（安全弁）
-    const myPrivate = data.privateTasks.filter(t => t.ownerEmail === myEmail);
-    if(myPrivate.length > 0 || data.privateTasks.length === 0){
+    if(!myEmail) { /* メール未設定なら個人タスクは触らない */ }
+    else {
+      // ownerEmailが自分と一致するものだけ反映（他人のデータは絶対に混入させない）
+      const myPrivate = data.privateTasks.filter(t => t.ownerEmail === myEmail);
+      // サーバーから自分のメールに紐づくデータが返ってきた場合のみ更新
+      // （空配列でもownerEmailで問い合わせた結果なので反映してよい）
       savePrivateTasks(myPrivate.map(t => ({ ...t, id: String(t.id) })));
     }
   }
@@ -4187,7 +4200,7 @@ function getThisWeekRange(){
 function renderStats(){
   const ts = fmt(T);
   const {start:wStart, end:wEnd} = getThisWeekRange();
-  const setEl = (id,val) => { const e=document.getElementById(id); if(e) e.textContent=val; };
+  const setEl = (id,val) => { try { const e=document.getElementById(id); if(e) e.textContent=val; } catch(e){} };
 
   // ダッシュボードと同じ集計基準に統一
   // チームビュー：チームタスク＋個人タスク両方
@@ -6409,12 +6422,12 @@ function dueLabel(due,done){
 function changeStatus(id,status){
   event.stopPropagation();
   // プライベートタスクも対応
-  let t = tasks.find(t=>t.id===id);
+  let t = tasks.find(t=>String(t.id)===String(id));
   let isPriv = false;
   let priv = [];
   if(!t){
-    priv = getPrivateTasks();
-    t = priv.find(t=>t.id===id);
+    priv = getPrivateTasks() || [];
+    t = priv.find(t=>String(t.id)===String(id));
     isPriv = true;
   }
   if(!t) return;
@@ -6483,7 +6496,8 @@ function changeStatus(id,status){
   if(status==='done'){
     const doneNav = document.querySelector('.nav-item[onclick*="done"]');
     if(doneNav){ setView('done', doneNav); }
-    toast('✅ 完了しました → 完了済みに移動');
+    const calMsg = (isGasEnabled()&&t.assignee&&t.due) ? '　📅 カレンダー更新中...' : '';
+    toast('✅ 完了しました → 完了済みに移動' + calMsg);
   } else {
     toast(`ステータスを「${STATUS_LABELS[status]}」に変更しました`);
   }
@@ -8289,6 +8303,28 @@ function getNthBusinessDayOfMonth(n, year, month){
 }
 
 // date+timeを結合してf-dueに同期
+// 開始日変更時に期限日が逆転していれば自動スライド
+function onStartDateChange(){
+  const startEl = document.getElementById('f-start');
+  const dueDateEl = document.getElementById('f-due-date');
+  const dueTimeEl = document.getElementById('f-due-time');
+  if(!startEl || !dueDateEl || !startEl.value || !dueDateEl.value) return;
+  const startDt = new Date(startEl.value);
+  const dueStr  = dueDateEl.value + 'T' + (dueTimeEl ? dueTimeEl.value : '17:00');
+  const dueDt   = new Date(dueStr);
+  if(!isNaN(startDt) && !isNaN(dueDt) && startDt > dueDt){
+    // 期限を開始日の1時間後に自動スライド
+    const newDue = new Date(startDt);
+    newDue.setHours(newDue.getHours() + 1);
+    const newDate = newDue.toISOString().split('T')[0];
+    const newTime = String(newDue.getHours()).padStart(2,'0') + ':' + String(newDue.getMinutes()).padStart(2,'0');
+    dueDateEl.value = newDate;
+    if(dueTimeEl) dueTimeEl.value = newTime;
+    syncDueDatetime();
+    toast('📅 期限日時を開始日時の1時間後に自動調整しました');
+  }
+}
+
 function syncDueDatetime(){
   const date = document.getElementById('f-due-date')?.value;
   const time = document.getElementById('f-due-time')?.value||'17:00';
@@ -9086,6 +9122,15 @@ function saveTask(){
   const title=document.getElementById('f-title').value.trim();
   if(!title){toast('⚠ タスク名を入力してください',true);return;}
   const v=getVals(title);
+  // 日時逆転チェック：開始日時 > 期限日時の場合はブロック
+  if(v.start && v.due){
+    const startDt = new Date(v.start);
+    const dueDt   = new Date(v.due);
+    if(!isNaN(startDt) && !isNaN(dueDt) && startDt > dueDt){
+      toast('❌ 開始日時は期限日時より前の日時を設定してください', true);
+      return;
+    }
+  }
   const isPrivate = v.isPrivate;
   let savedTask;
 
