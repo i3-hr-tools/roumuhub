@@ -2234,7 +2234,16 @@ var SHEET_TASKS   = 'tasks';
 var SHEET_MEMBERS = 'members';
 var SHEET_META    = 'meta';
 var SHEET_LOCK    = 'sync_lock';
-var EVENT_TAG     = '[労務]';
+
+function getCatPrefix(cat) {
+  var map = {
+    'kyuyo':     '【給与計算】',
+    'sankyuiku': '【産休・育休・休職】',
+    'nyutai':    '【入社・退職】',
+    'other':     '【その他】'
+  };
+  return map[cat] || '【その他】';
+}
 
 // ── エントリーポイント ─────────────────────────────────────────
 
@@ -2482,7 +2491,7 @@ function upsertTaskCalendar(task, member) {
     var dateStr = task.due.split('T')[0];
     var parts = dateStr.split('-');
     var dueDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-    var title = EVENT_TAG + ' ' + task.title;
+    var title = getCatPrefix(task.cat) + task.title;
     var searchStart = new Date(dueDate); searchStart.setMonth(searchStart.getMonth() - 2);
     var searchEnd   = new Date(dueDate); searchEnd.setMonth(searchEnd.getMonth() + 2);
     var existing = cal.getEvents(searchStart, searchEnd)
@@ -2535,7 +2544,7 @@ function syncCal(memberId, email, calendarId, tasks) {
       if (!t.due) return;
       var parts = t.due.split('T')[0].split('-');
       var d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-      var title = EVENT_TAG + ' ' + t.title;
+      var title = getCatPrefix(t.cat) + t.title;
       var existing = cal.getEvents(d, new Date(d.getTime() + 86400000))
         .filter(function(ev) { return ev.getTitle() === title; });
       if (!existing.length) {
