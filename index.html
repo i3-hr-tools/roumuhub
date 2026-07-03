@@ -9657,15 +9657,12 @@ function saveTemplates(){localStorage.setItem('roumu_templates',JSON.stringify(t
 // プリセットテンプレート（初回のみ）
 function loadDefaultTemplates(){
   templates=[
-    {id:'t1',title:'勤怠データ確認・修正',cat:'kyuyo',pri:'high',offset:'fixed',fixedday:15,assignee:'m1',remind:'1',note:'打刻漏れ・遅刻早退の確認'},
-    {id:'t2',title:'給与計算',cat:'kyuyo',pri:'high',offset:'fixed',fixedday:20,assignee:'m2',remind:'3',note:'勤怠締め後に開始'},
-    {id:'t3',title:'社会保険料の納付',cat:'kyuyo',pri:'high',offset:'3',fixedday:null,assignee:'m1',remind:'3',note:''},
-    {id:'t4',title:'源泉所得税の納付',cat:'kyuyo',pri:'high',offset:'-10',fixedday:null,assignee:'m2',remind:'3',note:'翌月10日まで'},
-    {id:'t5',title:'産休申請受付・書類確認',cat:'sankyuiku',pri:'high',offset:'fixed',fixedday:10,assignee:'m3',remind:'7',note:'出産予定日・申請書類の確認'},
-    {id:'t6',title:'育児休業給付金の申請',cat:'sankyuiku',pri:'high',offset:'fixed',fixedday:25,assignee:'m1',remind:'7',note:'ハローワークへの申請期限を確認'},
-    {id:'t7',title:'入社手続き（社保・雇用保険）',cat:'nyutai',pri:'high',offset:'fixed',fixedday:10,assignee:'m3',remind:'3',note:'当月入社者分'},
-    {id:'t8',title:'退職者の離職票作成',cat:'nyutai',pri:'mid',offset:'fixed',fixedday:20,assignee:'m3',remind:'3',note:'退職日から10日以内に発行'},
-    {id:'t9',title:'雇用保険喪失届の提出',cat:'nyutai',pri:'high',offset:'fixed',fixedday:15,assignee:'m1',remind:'3',note:'退職日翌日から10日以内'},
+    {id:'t1',title:'勤怠データ確認・修正',cat:'kyuyo',pri:'high',offset:'fixed',fixedday:15,assignee:'',remind:'1',note:'打刻漏れ・遅刻早退の確認'},
+    {id:'t2',title:'給与計算',cat:'kyuyo',pri:'high',offset:'fixed',fixedday:20,assignee:'',remind:'3',note:'勤怠締め後に開始'},
+    {id:'t3',title:'社会保険料の納付',cat:'kyuyo',pri:'high',offset:'3',fixedday:null,assignee:'',remind:'3',note:'毎月末日までに納付'},
+    {id:'t4',title:'源泉所得税の納付',cat:'kyuyo',pri:'high',offset:'-10',fixedday:null,assignee:'',remind:'3',note:'翌月10日まで'},
+    {id:'t5',title:'給与明細の配布・送付',cat:'kyuyo',pri:'mid',offset:'fixed',fixedday:25,assignee:'',remind:'1',note:'給与支払い日前後に配布'},
+    {id:'t6',title:'月次労務レポート作成',cat:'kyuyo',pri:'mid',offset:'fixed',fixedday:28,assignee:'',remind:'3',note:'月末締めで翌月初に提出'},
   ];
   saveTemplates();
 }
