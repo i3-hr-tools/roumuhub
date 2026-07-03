@@ -3558,6 +3558,8 @@ function clearLog(){
 function init(){
   if(!tasks.length) loadDefaults();
   cy=T.getFullYear(); cm=T.getMonth();
+  // テンプレートから入社・退職・産休・育休・休職を自動クリーンアップ
+  _cleanupTemplates();
   renderUserSelect();
   renderMemberList();
   populateAssigneeSelects();
@@ -3568,6 +3570,24 @@ function init(){
   setInterval(checkAlerts, 300000);
   // GAS設定済みなら30秒ごとの自動取得を開始
   if(isGasEnabled()) startAutoPoll();
+}
+
+// テンプレートから不要カテゴリを自動除去
+function _cleanupTemplates(){
+  try {
+    const raw = localStorage.getItem('roumu_templates');
+    if(!raw) return;
+    const arr = JSON.parse(raw);
+    const cleaned = arr.filter(t => t.cat !== 'nyutai' && t.cat !== 'sankyuiku');
+    if(cleaned.length !== arr.length){
+      localStorage.setItem('roumu_templates', JSON.stringify(cleaned));
+      // メモリ上のtemplates変数も更新
+      if(typeof templates !== 'undefined'){
+        templates.length = 0;
+        cleaned.forEach(t => templates.push(t));
+      }
+    }
+  } catch(e){ console.warn('_cleanupTemplates:', e); }
 }
 
 function loadDefaults(){
@@ -9617,30 +9637,47 @@ function importTemplateCSV(event){
 }
 
 function toggleAllTemplates(checked){
+  // 現在フィルタされているテンプレートのIDを取得
+  const filtered = templates.filter(t =>
+    (tmplCatFilt === 'all' || t.cat === tmplCatFilt) &&
+    (tmplFreqFilt === 'all' || (t.freq||'monthly') === tmplFreqFilt)
+  );
+  // tmplChecked（登録用Set）を完全同期
+  if(checked){
+    filtered.forEach(t => tmplChecked.add(t.id));
+  } else {
+    filtered.forEach(t => tmplChecked.delete(t.id));
+  }
+  // DOM上の削除用チェックボックスも同期
   document.querySelectorAll('.tmpl-chk').forEach(el=>{
     el.checked = checked;
-    // JSでcheckedを直接変更するとonchangeが発火しないブラウザがあるため
-    // 明示的にchangeイベントを発火させて選択状態を確実に同期する
-    el.dispatchEvent(new Event('change', {bubbles: true}));
   });
+  // DOM上の登録用チェックボックスも同期
+  document.querySelectorAll('[data-tid]').forEach(el=>{
+    el.checked = checked;
+  });
+  // カウント表示を更新
+  updateTmplCount();
   updateTmplDeleteCount();
 }
 
 function updateTmplDeleteCount(){
-  const cnt = document.querySelectorAll('.tmpl-chk:checked').length;
+  // DOMとtmplCheckedの両方を確認して正確なカウントを表示
+  const cnt = tmplChecked.size;
   const el = document.getElementById('tmpl-delete-count');
   if(el) el.textContent = cnt > 0 ? `${cnt}件選択中` : '';
   const allChk = document.getElementById('tmpl-select-all');
   const total = document.querySelectorAll('.tmpl-chk').length;
   if(allChk){
     allChk.indeterminate = cnt > 0 && cnt < total;
-    if(cnt === total && total > 0) allChk.checked = true;
+    if(cnt >= total && total > 0) allChk.checked = true;
     if(cnt === 0) allChk.checked = false;
   }
 }
 
 function bulkDeleteTemplates(){
-  const ids = [...document.querySelectorAll('.tmpl-chk:checked')].map(el=>String(el.dataset.id));
+  // tmplChecked（Set）から削除対象を取得
+  const ids = [...tmplChecked];
   if(!ids.length){ toast('⚠ テンプレートを選択してください',true); return; }
   if(!confirm(`選択した${ids.length}件のテンプレートを削除しますか？`)) return;
   templates = templates.filter(t=>!ids.includes(String(t.id)));
@@ -9726,12 +9763,11 @@ function renderTemplateList(){
         ? `${t.fixedday}日`
         : `第${t.offset}営業日`;
       html+=`<div style="display:flex;align-items:center;gap:6px;padding:9px 12px;border-radius:8px;background:var(--surface);border:1px solid var(--border);transition:all .12s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-        <!-- 一括削除用チェック -->
-        <input type="checkbox" class="tmpl-chk" data-id="${t.id}" onchange="updateTmplDeleteCount()"
-          style="width:13px;height:13px;accent-color:var(--red);flex-shrink:0" title="削除対象に選択">
-        <!-- 一括登録用チェック -->
+        <!-- 統合チェックボックス（削除・登録両用）tmplCheckedで一元管理 -->
         <label style="display:flex;align-items:center;gap:8px;flex:1;cursor:pointer">
-          <input type="checkbox" data-tid="${t.id}" ${checked?'checked':''} onchange="tmplToggle('${t.id}',this.checked)" style="width:15px;height:15px;accent-color:var(--accent);flex-shrink:0">
+          <input type="checkbox" class="tmpl-chk" data-id="${t.id}" data-tid="${t.id}" ${checked?'checked':''}
+            onchange="tmplToggleUnified('${t.id}',this.checked)"
+            style="width:14px;height:14px;accent-color:var(--accent);flex-shrink:0" title="選択（登録・削除共通）">
           <div style="flex:1;min-width:0">
             <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px">${t.title}</div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
@@ -9754,6 +9790,21 @@ function renderTemplateList(){
 function tmplToggle(id,checked){
   if(checked)tmplChecked.add(id);else tmplChecked.delete(id);
   updateTmplCount();
+}
+
+// 統合チェックボックス用（削除・登録両用）
+function tmplToggleUnified(id,checked){
+  if(checked){ tmplChecked.add(id); } else { tmplChecked.delete(id); }
+  updateTmplCount();
+  updateTmplDeleteCount();
+  // 全選択チェックボックスの indeterminate 状態を更新
+  const allChk = document.getElementById('tmpl-select-all');
+  const total = document.querySelectorAll('.tmpl-chk').length;
+  const checkedCount = document.querySelectorAll('.tmpl-chk:checked').length;
+  if(allChk){
+    allChk.indeterminate = checkedCount > 0 && checkedCount < total;
+    allChk.checked = checkedCount === total && total > 0;
+  }
 }
 
 function updateTmplCount(){
