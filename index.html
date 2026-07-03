@@ -9617,7 +9617,12 @@ function importTemplateCSV(event){
 }
 
 function toggleAllTemplates(checked){
-  document.querySelectorAll('.tmpl-chk').forEach(el=>el.checked=checked);
+  document.querySelectorAll('.tmpl-chk').forEach(el=>{
+    el.checked = checked;
+    // JSでcheckedを直接変更するとonchangeが発火しないブラウザがあるため
+    // 明示的にchangeイベントを発火させて選択状態を確実に同期する
+    el.dispatchEvent(new Event('change', {bubbles: true}));
+  });
   updateTmplDeleteCount();
 }
 
@@ -9635,10 +9640,10 @@ function updateTmplDeleteCount(){
 }
 
 function bulkDeleteTemplates(){
-  const ids = [...document.querySelectorAll('.tmpl-chk:checked')].map(el=>el.dataset.id);
+  const ids = [...document.querySelectorAll('.tmpl-chk:checked')].map(el=>String(el.dataset.id));
   if(!ids.length){ toast('⚠ テンプレートを選択してください',true); return; }
   if(!confirm(`選択した${ids.length}件のテンプレートを削除しますか？`)) return;
-  templates = templates.filter(t=>!ids.includes(t.id));
+  templates = templates.filter(t=>!ids.includes(String(t.id)));
   saveTemplates(); renderTemplateList();
   const allChk = document.getElementById('tmpl-select-all');
   if(allChk) allChk.checked = false;
