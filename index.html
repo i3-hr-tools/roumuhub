@@ -6123,6 +6123,22 @@ function stRowHTML(parentId,s){
   </div>`;
 }
 
+// 子タスク操作共通：親タスクをチーム/個人から検索するヘルパー
+function _findParentTask(parentId){
+  let t = tasks.find(t=>String(t.id)===String(parentId));
+  let isPriv = false;
+  let privArr = [];
+  if(!t){
+    privArr = getPrivateTasks();
+    t = privArr.find(t=>String(t.id)===String(parentId));
+    isPriv = true;
+  }
+  return {t, isPriv, privArr};
+}
+function _saveParentTask(isPriv, privArr){
+  if(isPriv){ savePrivateTasks(privArr); } else { saveTasks(); }
+}
+
 // ▶ボタン専用：カードを展開して子タスクを表示
 function expandCard(id){
   const card = document.getElementById('card-'+id);
@@ -6241,8 +6257,8 @@ function stDragEnd(e){
 }
 function openSubtaskModal(e,parentId,subtaskId){
   e.stopPropagation();
-  const t=tasks.find(t=>t.id===parentId);if(!t)return;
-  const s=subtaskId?t.subtasks?.find(s=>s.id===subtaskId):null;
+  const {t}=_findParentTask(parentId);if(!t)return;
+  const s=subtaskId?t.subtasks?.find(s=>String(s.id)===String(subtaskId)):null;
   // 担当者select更新
   const sel=document.getElementById('st-assignee');
   sel.innerHTML='<option value="">未割り当て</option>'+MEMBERS.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
@@ -6272,7 +6288,7 @@ function saveSubtaskDetail(){
   if(!title){toast('⚠ 子タスク名を入力してください',true);return;}
   const parentId=parseInt(document.getElementById('st-parent-id').value);
   const subtaskId=document.getElementById('st-sub-id').value;
-  const t=tasks.find(t=>t.id===parentId);if(!t)return;
+  const {t,isPriv,privArr}=_findParentTask(parentId);if(!t)return;
   if(!t.subtasks)t.subtasks=[];
   const vals={
     title,
@@ -6285,7 +6301,7 @@ function saveSubtaskDetail(){
     note:document.getElementById('st-note').value.trim(),
   };
   if(subtaskId){
-    const s=t.subtasks.find(s=>s.id===subtaskId);
+    const s=t.subtasks.find(s=>String(s.id)===String(subtaskId));
     if(s)Object.assign(s,vals);
   } else {
     t.subtasks.push({id:'s'+Date.now(),...vals});
@@ -6418,8 +6434,8 @@ function addSubtaskFromPanel(){
 }
 
 function toggleSubtaskDone(parentId,subtaskId){
-  const t=tasks.find(t=>t.id===parentId);if(!t||!t.subtasks)return;
-  const s=t.subtasks.find(s=>s.id===subtaskId);if(!s)return;
+  const {t,isPriv,privArr}=_findParentTask(parentId);if(!t||!t.subtasks)return;
+  const s=t.subtasks.find(s=>String(s.id)===String(subtaskId));if(!s)return;
   s.status=s.status==='done'?'todo':'done';
   checkParentAutoComplete(t);
   // 展開中のカードIDを保持
@@ -6437,8 +6453,8 @@ function toggleSubtaskDone(parentId,subtaskId){
 }
 
 function changeSubtaskStatus(parentId,subtaskId,status){
-  const t=tasks.find(t=>t.id===parentId);if(!t||!t.subtasks)return;
-  const s=t.subtasks.find(s=>s.id===subtaskId);if(!s)return;
+  const {t,isPriv,privArr}=_findParentTask(parentId);if(!t||!t.subtasks)return;
+  const s=t.subtasks.find(s=>String(s.id)===String(subtaskId));if(!s)return;
   s.status=status;
   checkParentAutoComplete(t);
   saveTasks();renderSubPanel();renderTasks();renderStats();renderCatTabCounts();
@@ -6446,8 +6462,8 @@ function changeSubtaskStatus(parentId,subtaskId,status){
 
 function deleteSubtask(e,parentId,subtaskId){
   e.stopPropagation();
-  const t=tasks.find(t=>t.id===parentId);if(!t||!t.subtasks)return;
-  t.subtasks=t.subtasks.filter(s=>s.id!==subtaskId);
+  const {t,isPriv,privArr}=_findParentTask(parentId);if(!t||!t.subtasks)return;
+  t.subtasks=t.subtasks.filter(s=>String(s.id)!==String(subtaskId));
   saveTasks();renderSubPanel();renderTasks();toast('🗑 削除しました');
 }
 
@@ -6760,7 +6776,7 @@ function startStInlineEdit(e,parentId,subId){
 
 // ══ SUBTASK QUICK EDIT ══
 function stQuickEditToggle(e,parentId,subId){
-  e.stopPropagation();
+  if(e) e.stopPropagation();
   const row=document.getElementById(`strow-${parentId}-${subId}`);
   if(!row)return;
   row.classList.toggle('st-qe-open');
@@ -6770,13 +6786,13 @@ function stQuickEditToggle(e,parentId,subId){
 }
 
 function saveStQuickEdit(parentId,subId){
-  const t=tasks.find(t=>t.id===parentId);if(!t||!t.subtasks)return;
-  const s=t.subtasks.find(s=>s.id===subId);if(!s)return;
+  const {t,isPriv,privArr}=_findParentTask(parentId);if(!t||!t.subtasks)return;
+  const s=t.subtasks.find(s=>String(s.id)===String(subId));if(!s)return;
   s.start=document.getElementById(`stqe-start-${parentId}-${subId}`)?.value||'';
   s.due=document.getElementById(`stqe-due-${parentId}-${subId}`)?.value||'';
   s.assignee=document.getElementById(`stqe-assignee-${parentId}-${subId}`)?.value||'';
   s.note=document.getElementById(`stqe-note-${parentId}-${subId}`)?.value||'';
-  saveTasks();rerenderInlineSubtasks(parentId);toast('💾 子タスクを更新しました');
+  _saveParentTask(isPriv,privArr);rerenderInlineSubtasks(parentId);toast('💾 子タスクを更新しました');
 }
 
 // ══ SUBTASK COPY & PASTE ══
@@ -6784,8 +6800,8 @@ let stClipboard=null;
 
 function copySubtask(e,parentId,subId){
   e.stopPropagation();
-  const t=tasks.find(t=>t.id===parentId);if(!t||!t.subtasks)return;
-  const s=t.subtasks.find(s=>s.id===subId);if(!s)return;
+  const {t,isPriv,privArr}=_findParentTask(parentId);if(!t||!t.subtasks)return;
+  const s=t.subtasks.find(s=>String(s.id)===String(subId));if(!s)return;
   stClipboard={...s};
   const row=document.getElementById(`strow-${parentId}-${subId}`);
   if(row){row.classList.add('st-copied');setTimeout(()=>row.classList.remove('st-copied'),400);}
