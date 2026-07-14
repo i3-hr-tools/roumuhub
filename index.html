@@ -4229,7 +4229,12 @@ function setMajorCat(cat,el){
 }
 
 function renderCatTabCounts(){
-  const pending=tasks.filter(t=>t.status!=='done');
+  // チームタスク＋個人タスク（自分のもの）を集計対象に統一
+  const privTasks = currentUser ? getPrivateTasks() : [];
+  const allTasks = [...tasks, ...privTasks].filter(t =>
+    !t.private || (currentUser && t.assignee === currentUser.id)
+  );
+  const pending = allTasks.filter(t=>t.status!=='done');
   document.getElementById('mc-all').textContent=pending.length;
   document.getElementById('mc-kyuyo').textContent=pending.filter(t=>t.cat==='kyuyo').length;
   document.getElementById('mc-sankyuiku').textContent=pending.filter(t=>t.cat==='sankyuiku').length;
