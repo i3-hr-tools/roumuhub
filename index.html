@@ -6091,11 +6091,13 @@ function toggleCard(id, event){
   // （選択モードはチェックボックスの onchange のみで制御）
   const e = event || window.event || {};
   const target = e.target || e.srcElement;
-  // チェックボックス・ボタン・入力要素のクリックは無視
+  // チェックボックス・ボタン・入力要素・子タスク行のクリックは無視
   if(target && (target.tagName === 'INPUT' || target.tagName === 'BUTTON' ||
       target.tagName === 'A' || target.tagName === 'SELECT' ||
       target.tagName === 'TEXTAREA' || target.closest('.task-actions') ||
-      target.closest('.quick-edit-bar') || target.closest('.subtask-inline'))) return;
+      target.closest('.quick-edit-bar') || target.closest('.subtask-inline') ||
+      target.closest('.st-row') || target.closest('.st-qe-bar') ||
+      target.closest('.subtask-wrap'))) return;
   const syntheticEvent = {stopPropagation: ()=>{}};
   editTask(syntheticEvent, id);
 }
