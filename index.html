@@ -4381,7 +4381,7 @@ function bulkDuplicate(){
   const ids = getCheckedIds();
   if(!ids.length){ toast('⚠ タスクを選択してください',true); return; }
   const newTasks = ids.map(id => {
-    const t = tasks.find(t=>t.id===id);
+    const t = tasks.find(t=>String(t.id)===String(id));
     if(!t) return null;
     return { ...t, id: String(Date.now())+String(Math.random()).slice(2,7), title: t.title+' (コピー)', status:'todo', comments:[], files:[] };
   }).filter(Boolean);
@@ -6157,7 +6157,7 @@ function stDrop(e, parentId, targetSubId){
   e.preventDefault();
   e.currentTarget.classList.remove('drag-over');
   if(dragSubId===targetSubId||dragParentId!==parentId) return;
-  const t=tasks.find(t=>t.id===parentId);if(!t||!t.subtasks)return;
+  const t=tasks.find(t=>String(t.id)===String(parentId));if(!t||!t.subtasks)return;
   const fromIdx=t.subtasks.findIndex(s=>s.id===dragSubId);
   const toIdx=t.subtasks.findIndex(s=>s.id===targetSubId);
   if(fromIdx===-1||toIdx===-1)return;
@@ -6260,7 +6260,7 @@ function openSubPanel(e,parentId){
 function renderSubPanel(){
   // 子タスクパネルが存在しない場合はスキップ
   if(!document.getElementById('sub-list-area')) return;
-  const t=tasks.find(t=>t.id===currentSubParentId);
+  const t=tasks.find(t=>String(t.id)===String(currentSubParentId));
   if(!t){
     const titleEl=document.getElementById('sub-parent-title');
     const listEl=document.getElementById('sub-list-area');
@@ -6333,7 +6333,7 @@ function subPanelItemHTML(parentId,s){
 
 function addSubtaskFromPanel(){
   if(!currentSubParentId){toast('⚠ 親タスクが選択されていません',true);return;}
-  const t=tasks.find(t=>t.id===currentSubParentId);if(!t)return;
+  const t=tasks.find(t=>String(t.id)===String(currentSubParentId));if(!t)return;
   const title=document.getElementById('sp-title').value.trim();
   if(!title){toast('⚠ 子タスク名を入力してください',true);return;}
   if(!t.subtasks)t.subtasks=[];
@@ -6512,7 +6512,7 @@ function addComment(id){
   if(!currentUser){toast('⚠ ユーザーを選択してください',true);return;}
   const input=document.getElementById('ci-'+id);
   const text=input.value.trim();if(!text)return;
-  const t=tasks.find(t=>t.id===id);if(!t)return;
+  const t=tasks.find(t=>String(t.id)===String(id));if(!t)return;
   if(!t.comments)t.comments=[];
   const now=new Date();
   t.comments.push({id:'c'+Date.now(),userId:currentUser.id,text,at:`${now.getFullYear()}/${pad(now.getMonth()+1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`});
@@ -6535,7 +6535,7 @@ function addComment(id){
 function startInlineEdit(e,id){
   e.stopPropagation();
   const span=document.getElementById('title-text-'+id);
-  const t=tasks.find(t=>t.id===id);if(!t)return;
+  const t=tasks.find(t=>String(t.id)===String(id));if(!t)return;
   const input=document.createElement('input');
   input.className='task-title-input';
   input.value=t.title;
@@ -6592,7 +6592,7 @@ function previewDeadlineRule(){
 }
 
 function saveQuickEdit(id){
-  const t=tasks.find(t=>t.id===id);if(!t)return;
+  const t=tasks.find(t=>String(t.id)===String(id));if(!t)return;
   t.due=document.getElementById('qe-due-'+id)?.value||t.due;
   t.assignee=document.getElementById('qe-assignee-'+id)?.value||'';
   t.approver=document.getElementById('qe-approver-'+id)?.value||'';
@@ -6609,7 +6609,7 @@ let clipboard=null; // コピーしたタスクを一時保存
 
 function pasteAsNew(e,id){
   e.stopPropagation();
-  const src=tasks.find(t=>t.id===id);if(!src)return;
+  const src=tasks.find(t=>String(t.id)===String(id));if(!src)return;
   clipboard={...src};
   // カードにフラッシュ演出
   const card=document.getElementById('card-'+id);
@@ -6671,7 +6671,7 @@ function startStInlineEdit(e,parentId,subId){
   e.stopPropagation();
   const wrap=document.getElementById(`st-title-wrap-${parentId}-${subId}`);
   if(!wrap)return;
-  const t=tasks.find(t=>t.id===parentId);if(!t||!t.subtasks)return;
+  const t=tasks.find(t=>String(t.id)===String(parentId));if(!t||!t.subtasks)return;
   const s=t.subtasks.find(s=>s.id===subId);if(!s)return;
   const input=document.createElement('input');
   input.className='st-name-input';
@@ -6728,7 +6728,7 @@ function copySubtask(e,parentId,subId){
 
 function pasteSubtask(parentId){
   if(!stClipboard)return;
-  const t=tasks.find(t=>t.id===parentId);if(!t)return;
+  const t=tasks.find(t=>String(t.id)===String(parentId));if(!t)return;
   if(!t.subtasks)t.subtasks=[];
   t.subtasks.push({...stClipboard,id:'s'+Date.now(),title:stClipboard.title+' (コピー)'});
   saveTasks();rerenderInlineSubtasks(parentId);toast('📋 子タスクをペーストしました');
@@ -6893,7 +6893,7 @@ function toggleApprovalDetail(id){
 }
 
 function approve(id,ok,reason){
-  const t=tasks.find(t=>t.id===id);if(!t)return;
+  const t=tasks.find(t=>String(t.id)===String(id));if(!t)return;
   if(!currentUser){toast('⚠ ユーザーを選択してください',true);return;}
 
   // 差し戻し時は理由入力ダイアログ
@@ -9005,7 +9005,7 @@ function makeIcs(list){
 function dlIcs(c,n){const b=new Blob([c],{type:'text/calendar;charset=utf-8'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=n;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}
 function exportAllIcs(){const p=tasks.filter(t=>t.status!=='done'&&t.due);if(!p.length){toast('⚠ 対象タスクなし',true);return;}dlIcs(makeIcs(p),'roumu-team-all.ics');toast(`📅 ${p.length}件を書き出しました`);}
 function exportMonthIcs(){const m=`${T.getFullYear()}-${pad(T.getMonth()+1)}`,l=tasks.filter(t=>t.status!=='done'&&t.due&&t.due.startsWith(m));if(!l.length){toast('⚠ 今月のタスクなし',true);return;}dlIcs(makeIcs(l),`roumu-team-${m}.ics`);toast(`📅 今月分${l.length}件を書き出しました`);}
-function exportSingleIcs(id){event.stopPropagation();const t=tasks.find(t=>t.id===id);if(!t?.due){toast('⚠ 期限日が未設定です',true);return;}dlIcs(makeIcs([t]),`roumu-team-${t.id}.ics`);toast('📅 カレンダーに追加しました');}
+function exportSingleIcs(id){event.stopPropagation();const t=tasks.find(t=>String(t.id)===String(id));if(!t?.due){toast('⚠ 期限日が未設定です',true);return;}dlIcs(makeIcs([t]),`roumu-team-${t.id}.ics`);toast('📅 カレンダーに追加しました');}
 
 // ══ POPULATE SELECTS ══
 function populateAssigneeSelects(){
@@ -9317,7 +9317,7 @@ function editTask(e,id){
 
 function delTask(e,id){
   e.stopPropagation();if(!confirm('削除しますか？'))return;
-  const t=tasks.find(t=>t.id===id);
+  const t=tasks.find(t=>String(t.id)===String(id));
   // カレンダーから削除（非同期）
   if(t&&t.assignee&&isGasEnabled()){
     const member=MEMBERS.find(m=>m.id===t.assignee);
