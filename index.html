@@ -3854,11 +3854,15 @@ function backToMemberSelect(){
 
 function switchUser(){
   _pinEntry = '';
-  document.getElementById('login-step-pin').style.display = 'none';
-  document.getElementById('login-step-member').style.display = 'block';
-  document.getElementById('pin-error').style.display = 'none';
+  const pinEl = document.getElementById('login-step-pin');
+  const memberEl = document.getElementById('login-step-member');
+  const pinErrEl = document.getElementById('pin-error');
+  if(pinEl) pinEl.style.display = 'none';
+  if(memberEl) memberEl.style.display = 'block';
+  if(pinErrEl) pinErrEl.style.display = 'none';
   renderUserSelect();
-  document.getElementById('user-select-modal').classList.add('open');
+  const modal = document.getElementById('user-select-modal');
+  if(modal) modal.classList.add('open');
 }
 
 // ══ カレンダー自動同期（タスク単体） ══
@@ -6105,7 +6109,7 @@ function stRowHTML(parentId,s){
     <!-- クイック編集バー -->
     <div class="st-qe-bar" id="st-qe-${parentId}-${s.id}">
       <div><span class="st-qe-label">開始日</span><input class="st-qe-input" id="stqe-start-${parentId}-${s.id}" type="datetime-local" value="${s.start||''}" style="width:130px"></div>
-      <div><span class="st-qe-label">期限日</span><input class="st-qe-input" id="stqe-due-${parentId}-${s.id}" type="datetime-local" value="${s.due||''}" style="width:130px"></div>
+      <div><span class="st-qe-label">期限日</span><input class="st-qe-input" id="stqe-due-${parentId}-${s.id}" type="datetime-local" value="${(s.due&&s.due.length>=16)?s.due.slice(0,16):''}" style="width:130px"></div>
       <div><span class="st-qe-label">担当者</span>
         <select class="st-qe-input" id="stqe-assignee-${parentId}-${s.id}" style="width:110px">
           <option value="">未割り当て</option>
@@ -6152,10 +6156,19 @@ function quickAddSubtask(parentId){
   if(!inp)return;
   const title=inp.value.trim();
   if(!title){inp.focus();return;}
-  const t=tasks.find(t=>t.id===parentId);if(!t)return;
+  // チームタスク・個人タスク両方からString型で検索
+  let t=tasks.find(t=>String(t.id)===String(parentId));
+  let isPriv=false;
+  let priv=[];
+  if(!t){
+    priv=getPrivateTasks();
+    t=priv.find(t=>String(t.id)===String(parentId));
+    isPriv=true;
+  }
+  if(!t)return;
   if(!t.subtasks)t.subtasks=[];
   t.subtasks.push({id:'s'+Date.now(),title,assignee:currentUser?.id||'',due:'',status:'todo'});
-  saveTasks();
+  if(isPriv){savePrivateTasks(priv);}else{saveTasks();}
   rerenderInlineSubtasks(parentId);
   inp.value='';inp.focus();
   renderStats();renderCatTabCounts();
@@ -6163,7 +6176,9 @@ function quickAddSubtask(parentId){
 }
 
 function rerenderInlineSubtasks(parentId){
-  const t=tasks.find(t=>t.id===parentId);if(!t)return;
+  let t=tasks.find(t=>String(t.id)===String(parentId));
+  if(!t){ const priv=getPrivateTasks(); t=priv.find(t=>String(t.id)===String(parentId)); }
+  if(!t)return;
   const subs=t.subtasks||[];
   const doneCount=subs.filter(s=>s.status==='done').length;
   const pct=subs.length?Math.round(doneCount/subs.length*100):0;
