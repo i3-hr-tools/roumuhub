@@ -9212,9 +9212,27 @@ function saveTask(){
 }
 
 function copyTask(e,id){
-  e.stopPropagation();const src=tasks.find(t=>t.id===id);if(!src)return;
-  tasks.push({...src,id:String(Date.now()),title:src.title+' (コピー)',status:'todo',comments:[],files:[]});
-  saveTasks();renderAll();toast('📋 コピーしました');
+  e.stopPropagation();
+  // String型IDで検索（チームタスク → 個人タスクの順）
+  let src = tasks.find(t=>String(t.id)===String(id));
+  let isPriv = false;
+  let priv = [];
+  if(!src){
+    priv = getPrivateTasks();
+    src = priv.find(t=>String(t.id)===String(id));
+    isPriv = true;
+  }
+  if(!src) return;
+  const newTask = {...src, id:String(Date.now()), title:src.title+' (コピー)', status:'todo', comments:[], files:[]};
+  if(isPriv){
+    priv.push(newTask);
+    savePrivateTasks(priv);
+  } else {
+    tasks.push(newTask);
+    saveTasks();
+  }
+  renderAll();
+  toast('📋 コピーしました');
 }
 
 function editTask(e,id){
