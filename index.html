@@ -3886,6 +3886,7 @@ async function autoSyncTaskToCalendar(task){
     await fetch(`${getGasUrl()}?${params}`, { redirect:'follow' });
   } catch(e) {
     console.warn('autoSyncTaskToCalendar failed:', e);
+    setSyncStatus('⚠ カレンダー同期失敗');
   }
 }
 
@@ -3903,6 +3904,7 @@ async function autoDeleteTaskFromCalendar(taskId, taskTitle, member){
     await fetch(`${getGasUrl()}?${params}`, { redirect:'follow' });
   } catch(e) {
     console.warn('autoDeleteTaskFromCalendar failed:', e);
+    setSyncStatus('⚠ カレンダー削除失敗');
   }
 }
 
@@ -4505,7 +4507,7 @@ function renderAnnualChecklist(proj,pi){
             <input type="checkbox" ${isDone?'checked':''} onchange="toggleAnnualTask(${pi},${ti},this.checked)"
               style="width:16px;height:16px;accent-color:var(--green);cursor:pointer;flex-shrink:0">
             <div style="flex:1;min-width:0">
-              <div style="font-size:12px;font-weight:600;color:${isDone?'var(--text3)':'var(--text)'};text-decoration:${isDone?'line-through':'none'}">${t.title}</div>
+              <div style="font-size:12px;font-weight:600;color:${isDone?'var(--text3)':'var(--text)'};text-decoration:${isDone?'line-through':'none'}">${escHtml(t.title)}</div>
               <div style="display:flex;gap:8px;margin-top:2px;flex-wrap:wrap">
                 ${t.due?`<span style="font-size:10px;color:${isOverdue?'var(--red)':'var(--text3)'};font-family:var(--mono)">📅 ${t.due}${isOverdue?' ⚠':''}</span>`:'<span style="font-size:10px;color:var(--text3)">📅 期限未設定</span>'}
                 ${tm?`<span style="font-size:10px;color:var(--text3)">👤 ${tm.name}</span>`:''}
@@ -5058,7 +5060,7 @@ function renderArchivePanel(){
               onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
               <span style="font-size:16px;flex-shrink:0">✅</span>
               <div style="flex:1;min-width:0">
-                <div style="font-size:12px;font-weight:600;color:var(--text);text-decoration:line-through;margin-bottom:2px">${t.title}</div>
+                <div style="font-size:12px;font-weight:600;color:var(--text);text-decoration:line-through;margin-bottom:2px">${escHtml(t.title)}</div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap">
                   <span style="font-size:10px;color:var(--text3)">${CAT_LABELS[t.cat]||t.cat}</span>
                   ${member?`<span style="font-size:10px;color:var(--text3)">👤 ${member.name}</span>`:''}
@@ -5327,91 +5329,6 @@ function switchRightTab(tab, el){
   });
 }
 
-function openEditInPanel(id){
-  const t=tasks.find(x=>x.id===id)||getPrivateTasks().find(x=>x.id===id);
-  if(!t) return;
-  // 右パネルが非表示なら強制表示
-  const rp=document.querySelector('.right-panel');
-  if(rp && rp.style.display==='none') rp.style.display='';
-  const STATUS_LABELS={todo:'未着手',inprogress:'進行中',review:'承認待ち',done:'完了'};
-  const CAT_LABELS={kyuyo:'給与計算',sankyuiku:'産休・育休・休職',nyutai:'入社・退職',other:'その他'};
-  const dueStr=(t.due||'').split('T')[0];
-  const timeStr=(t.due||'').split('T')[1]||'17:00';
-  const memberOpts='<option value="">未割り当て</option>'+MEMBERS.map(m=>`<option value="${m.id}" ${t.assignee===m.id?'selected':''}>${m.name}</option>`).join('');
-  const approverOpts='<option value="">承認不要</option>'+MEMBERS.map(m=>`<option value="${m.id}" ${t.approver===m.id?'selected':''}>${m.name}</option>`).join('');
-  const el=document.getElementById('panel-edit-content');
-  if(!el) return;
-  el.innerHTML=`
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div style="font-size:13px;font-weight:700">✏️ タスクを編集</div>
-      <button onclick="switchRightTab('dash',document.getElementById('ptab-dash'))"
-        style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--text3)">✕</button>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:10px">
-      <div><label style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;display:block;margin-bottom:3px">タイトル *</label>
-        <input id="pe-title" class="form-input" value="${t.title||''}" style="width:100%;box-sizing:border-box"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div><label style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;display:block;margin-bottom:3px">カテゴリ</label>
-          <select id="pe-cat" class="form-input" style="width:100%">${Object.entries(CAT_LABELS).map(([k,v])=>`<option value="${k}" ${t.cat===k?'selected':''}>${v}</option>`).join('')}</select></div>
-        <div><label style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;display:block;margin-bottom:3px">ステータス</label>
-          <select id="pe-status" class="form-input" style="width:100%">${Object.entries(STATUS_LABELS).map(([k,v])=>`<option value="${k}" ${t.status===k?'selected':''}>${v}</option>`).join('')}</select></div>
-      </div>
-      <div><label style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;display:block;margin-bottom:3px">期限日時</label>
-        <div style="display:flex;gap:6px">
-          <input id="pe-due-date" type="date" class="form-input" value="${dueStr}" style="flex:1">
-          <input id="pe-due-time" type="time" class="form-input" value="${timeStr}" style="width:90px">
-        </div></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div><label style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;display:block;margin-bottom:3px">担当者</label>
-          <select id="pe-assignee" class="form-input" style="width:100%">${memberOpts}</select></div>
-        <div><label style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;display:block;margin-bottom:3px">承認者</label>
-          <select id="pe-approver" class="form-input" style="width:100%">${approverOpts}</select></div>
-      </div>
-      <div><label style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;display:block;margin-bottom:3px">繰り返し</label>
-        <select id="pe-rep" class="form-input" style="width:100%">
-          <option value="" ${!t.rep?'selected':''}>なし</option>
-          <option value="monthly" ${t.rep==='monthly'?'selected':''}>毎月</option>
-          <option value="weekly" ${t.rep==='weekly'?'selected':''}>毎週</option>
-        </select></div>
-      <div><label style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;display:block;margin-bottom:3px">メモ</label>
-        <textarea id="pe-note" class="form-input" rows="3" style="width:100%;box-sizing:border-box;resize:vertical">${t.note||''}</textarea></div>
-      <div style="display:flex;gap:8px;margin-top:4px">
-        <button onclick="savePanelEdit(${id})" class="btn btn-primary" style="flex:1;font-size:12px">💾 保存</button>
-        <button onclick="if(confirm('削除しますか？')){delTask(event,${id});switchRightTab('dash',document.getElementById('ptab-dash'));}"
-          style="padding:8px 12px;border-radius:8px;border:1px solid #fecaca;background:#fef2f2;color:var(--red);cursor:pointer;font-size:12px;font-family:var(--font)"
-          onmouseover="this.style.background='var(--red)';this.style.color='#fff'"
-          onmouseout="this.style.background='#fef2f2';this.style.color='var(--red)'">🗑</button>
-      </div>
-    </div>`;
-  document.getElementById('ptab-edit').style.display='';
-  switchRightTab('edit',document.getElementById('ptab-edit'));
-}
-
-function savePanelEdit(id){
-  let t=tasks.find(x=>x.id===id);
-  let isPriv=false, priv=[];
-  if(!t){priv=getPrivateTasks();t=priv.find(x=>x.id===id);isPriv=true;}
-  if(!t) return;
-  const title=document.getElementById('pe-title')?.value.trim();
-  if(!title){toast('⚠ タイトルを入力してください',true);return;}
-  const dueDate=document.getElementById('pe-due-date')?.value;
-  const dueTime=document.getElementById('pe-due-time')?.value||'17:00';
-  t.title=title;
-  t.cat=document.getElementById('pe-cat')?.value||t.cat;
-  t.status=document.getElementById('pe-status')?.value||t.status;
-  t.due=dueDate?dueDate+'T'+dueTime:'';
-  t.assignee=document.getElementById('pe-assignee')?.value||'';
-  t.approver=document.getElementById('pe-approver')?.value||'';
-  t.rep=document.getElementById('pe-rep')?.value||'';
-  t.note=document.getElementById('pe-note')?.value.trim()||'';
-  if(t.status==='done'&&!t.completedAt) t.completedAt=new Date().toISOString().split('T')[0];
-  if(isPriv) savePrivateTasks(priv); else saveTasks();
-  renderAll();
-  if(isGasEnabled()&&t.assignee&&t.due) autoSyncTaskToCalendar(t);
-  toast('💾 保存しました');
-  openEditInPanel(id);
-}
-
 
 function showTaskDetail(id){
   const t = tasks.find(x=>x.id===id);
@@ -5442,7 +5359,7 @@ function showTaskDetail(id){
     <!-- タイトル -->
     <div style="font-size:14px;font-weight:700;color:var(--text);line-height:1.5;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border)">
       ${t.private?'<span style="font-size:11px;padding:1px 6px;border-radius:4px;background:#f1f5f9;color:#64748b;border:1px solid #cbd5e1;margin-right:6px">🔒</span>':''}
-      ${t.title}
+      ${escHtml(t.title)}
     </div>
 
     <!-- ステータス・カテゴリ -->
@@ -5492,7 +5409,7 @@ function showTaskDetail(id){
       ${subs.map(s=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
         <input type="checkbox" ${s.status==='done'?'checked':''} style="width:14px;height:14px;accent-color:var(--accent)"
           onchange="toggleSubInDetail(${t.id},'${s.id}',this.checked)">
-        <span style="font-size:12px;color:${s.status==='done'?'var(--text3)':'var(--text)'};text-decoration:${s.status==='done'?'line-through':'none'}">${s.title}</span>
+        <span style="font-size:12px;color:${s.status==='done'?'var(--text3)':'var(--text)'};text-decoration:${s.status==='done'?'line-through':'none'}">${escHtml(s.title)}</span>
       </div>`).join('')}
     </div>`:''}
 
@@ -5737,7 +5654,7 @@ function renderTaskTable(list){
           ${isChild?'<span style="font-size:11px;color:#0369a1;margin-right:2px">▸</span>':''}
           <span id="tbl-title-${t.id}"
             style="font-weight:${isChild?'500':'600'};color:${isChild?'#0369a1':isDone?'var(--text3)':'var(--text)'};font-size:${isChild?'11px':'12px'};line-height:1.4;text-decoration:${isDone?'line-through':'none'}"
-            >${t.title}</span>
+            >${escHtml(t.title)}</span>
           ${!isChild&&t.private?'<span style="font-size:10px;padding:1px 5px;border-radius:4px;background:#f1f5f9;color:#64748b;border:1px solid #cbd5e1">🔒</span>':''}
           ${!isChild&&t.rep?`<span style="font-size:10px;padding:1px 5px;border-radius:4px;background:#ede9fe;color:#7c3aed;border:1px solid #ddd6fe">${repLabel}</span>`:''}
         </div>
@@ -5997,7 +5914,7 @@ function cardHTML(t){
       <div class="task-body">
         <div class="task-title" id="title-wrap-${t.id}">
           <span id="arrow-${t.id}" onclick="event.stopPropagation();expandCard(${t.id})" style="font-size:11px;color:var(--text3);margin-right:5px;display:inline-block;transition:transform .2s;cursor:pointer;padding:2px 4px;border-radius:3px" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='transparent'" title="子タスクを展開">▶</span>
-          <span id="title-text-${t.id}" ondblclick="startInlineEdit(event,${t.id})" title="ダブルクリックでタイトル編集" style="cursor:text">${t.title}</span>
+          <span id="title-text-${t.id}" ondblclick="startInlineEdit(event,${t.id})" title="ダブルクリックでタイトル編集" style="cursor:text">${escHtml(t.title)}</span>
           ${t.private?'<span style="font-size:10px;padding:1px 5px;border-radius:5px;background:#f1f5f9;color:#64748b;border:1px solid #cbd5e1;margin-left:4px">🔒 個人</span>':''}
           ${subs.length?`<span style="font-size:10px;font-family:var(--mono);font-weight:600;padding:1px 7px;border-radius:10px;margin-left:6px;background:${doneCount===subs.length&&subs.length>0?'var(--accent-light)':'var(--surface2)'};color:${doneCount===subs.length&&subs.length>0?'var(--accent)':'var(--text3)'}">${doneCount}/${subs.length}</span>`:''}
           ${privateTag}
@@ -6085,7 +6002,7 @@ function stRowHTML(parentId,s){
       <div class="st-handle" title="ドラッグで並び替え">⠿</div>
       <input type="checkbox" ${s.status==='done'?'checked':''} onchange="toggleSubtaskDone(${parentId},'${s.id}')" style="width:16px;height:16px;accent-color:var(--green);cursor:pointer;flex-shrink:0" title="完了にする">
       <div style="flex:1;min-width:0">
-        <div id="st-title-wrap-${parentId}-${s.id}" class="st-name" ondblclick="startStInlineEdit(event,${parentId},'${s.id}')" title="ダブルクリックでタイトル編集" style="cursor:text">${s.title}</div>
+        <div id="st-title-wrap-${parentId}-${s.id}" class="st-name" ondblclick="startStInlineEdit(event,${parentId},'${s.id}')" title="ダブルクリックでタイトル編集" style="cursor:text">${escHtml(s.title)}</div>
         <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:3px;align-items:center">
           ${member?`<span style="font-size:10px;color:var(--text2);display:flex;align-items:center;gap:3px"><span style="width:7px;height:7px;border-radius:50%;background:${member.color};display:inline-block"></span>${member.name}</span>`:''}
           ${s.start?`<span style="font-size:10px;font-family:var(--mono);color:var(--text3)">🗓 ${s.start.replace(/-/g,'/')}</span>`:''}
@@ -6399,7 +6316,7 @@ function subPanelItemHTML(parentId,s){
   return `<div class="sp-item${isDone?' done':''}">
     <div class="sp-check${isDone?' done':s.status==='inprogress'?' inprogress':''}" onclick="toggleSubtaskDone(${parentId},'${s.id}')"></div>
     <div class="sp-body">
-      <div class="sp-title">${s.title}</div>
+      <div class="sp-title">${escHtml(s.title)}</div>
       <div class="sp-meta">
         ${member?`<span style="font-size:11px;color:var(--text2);display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:${member.color};display:inline-block"></span>${member.name}</span>`:''}
         ${s.due?`<span class="due-label ${dueCls}" style="font-size:11px">📅 ${s.due.replace(/-/g,'/')}</span>`:''}
@@ -6939,7 +6856,7 @@ function renderApprovals(){
     return `<div class="approval-item" style="flex-direction:column;align-items:stretch;cursor:pointer"
       onclick="toggleApprovalDetail(${t.id})">
       <div style="display:flex;align-items:center;gap:8px">
-        <div style="flex:1;font-size:12px;font-weight:600;color:var(--text)">${t.title}</div>
+        <div style="flex:1;font-size:12px;font-weight:600;color:var(--text)">${escHtml(t.title)}</div>
         <button class="appr-btn ok" onclick="event.stopPropagation();approve(${t.id},true)">✓ 承認</button>
         <button class="appr-btn ng" onclick="event.stopPropagation();approve(${t.id},false)">✕ 差戻</button>
       </div>
@@ -7125,7 +7042,7 @@ function renderReminders(){
       return `<div class="remind-item" onclick="highlightTask(${t.id})" ondblclick="focusTask(${t.id})" style="cursor:pointer" title="クリック:スクロール / ダブルクリック:このタスクのみ表示">
         <div class="remind-dot red"></div>
         <div style="flex:1">
-          <div class="remind-text">⚠ ${t.title}</div>
+          <div class="remind-text">⚠ ${escHtml(t.title)}</div>
           <div class="remind-who">${when}（${t.due.split('T')[0]}）${member?' · '+member.name:''}</div>
         </div>
       </div>`;
@@ -7135,7 +7052,7 @@ function renderReminders(){
       return `<div class="remind-item" onclick="highlightTask(${t.id})" ondblclick="focusTask(${t.id})" style="cursor:pointer" title="クリック:スクロール / ダブルクリック:このタスクのみ表示">
         <div class="remind-dot ${dot}"></div>
         <div style="flex:1">
-          <div class="remind-text">${t.title}</div>
+          <div class="remind-text">${escHtml(t.title)}</div>
           <div class="remind-who">${when}（${t.due.split('T')[0]}）${member?' · '+member.name:''}</div>
         </div>
       </div>`;
@@ -7740,7 +7657,6 @@ const LEAVE_TYPES = {
 function renderLeaveGantt(){
   const area = document.getElementById('leave-gantt-area');
   if(!area){ console.error('leave-gantt-area not found'); return; }
-  console.log('renderLeaveGantt called, area display:', area.style.display);
   area.style.display = 'block'; // 確実に表示
 
   const now = new Date();
@@ -9813,7 +9729,7 @@ function renderTemplateList(){
             onchange="tmplToggleUnified('${t.id}',this.checked)"
             style="width:14px;height:14px;accent-color:var(--accent);flex-shrink:0" title="選択（登録・削除共通）">
           <div style="flex:1;min-width:0">
-            <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px">${t.title}</div>
+            <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px">${escHtml(t.title)}</div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
               <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">📅 ${dueDesc}</span>
               <span style="font-size:10px;padding:1px 6px;border-radius:6px;background:${ (t.freq||'monthly')==='monthly'?'#dbeafe':(t.freq==='yearly'?'#dcfce7':'#fef3c7') };color:${ (t.freq||'monthly')==='monthly'?'#1d4ed8':(t.freq==='yearly'?'#166534':'#92400e') };border:1px solid ${ (t.freq||'monthly')==='monthly'?'#bfdbfe':(t.freq==='yearly'?'#bbf7d0':'#fde68a') }">${ (t.freq||'monthly')==='monthly'?'📅 月次':(t.freq==='yearly'?'📆 年次':'⚡ イレギュラー') }</span>
@@ -9889,7 +9805,7 @@ function renderTmplSubtasks(){
   el.innerHTML=tmplSubtasks.map(s=>`
     <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#fff;border:1px solid var(--border);border-radius:6px">
       <span style="font-size:11px;color:var(--text3)">▸</span>
-      <span style="flex:1;font-size:12px;color:var(--text)">${s.title}</span>
+      <span style="flex:1;font-size:12px;color:var(--text)">${escHtml(s.title)}</span>
       <button onclick="deleteTmplSubtask('${s.id}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px;padding:2px 4px">🗑</button>
     </div>`).join('');
 }
