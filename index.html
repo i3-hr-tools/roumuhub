@@ -806,26 +806,35 @@ body.modal-open{overflow:hidden}
 <!-- ADMIN PANEL（メンバー管理 + 承認ログを統合） -->
   <div id="admin-panel" style="display:none;flex-direction:column;overflow:hidden;width:100%">
     <!-- 内部タブ -->
-    <div style="display:flex;border-bottom:1px solid var(--border);background:#fff;padding:0 24px">
-      <button class="panel-tab active" id="admin-tab-members" onclick="switchAdminTab('members')" style="padding:12px 20px;font-size:13px">👥 メンバー管理</button>
-      <button class="panel-tab" id="admin-tab-log" onclick="switchAdminTab('log')" style="padding:12px 20px;font-size:13px">📋 承認ログ <span id="mc-approvallog" style="font-size:10px;font-family:var(--mono);padding:1px 6px;border-radius:8px;background:var(--purple-light);color:var(--purple);margin-left:4px">0</span></button>
-      <button class="panel-tab" id="admin-tab-settings" onclick="switchAdminTab('settings')" style="padding:12px 20px;font-size:13px">⚙ 設定</button>
+    <div style="background:#fff;border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;gap:4px">
+      <div style="display:flex;background:var(--surface2);border-radius:10px;padding:3px;gap:2px">
+        <button id="admin-tab-members" onclick="switchAdminTab('members')"
+          style="padding:7px 18px;border-radius:8px;border:none;font-size:12px;font-weight:600;font-family:var(--font);cursor:pointer;transition:all .15s;background:var(--accent);color:#fff;box-shadow:0 1px 4px rgba(0,0,0,.15)">
+          👥 メンバー
+        </button>
+        <button id="admin-tab-log" onclick="switchAdminTab('log')"
+          style="padding:7px 18px;border-radius:8px;border:none;font-size:12px;font-weight:600;font-family:var(--font);cursor:pointer;transition:all .15s;background:transparent;color:var(--text2)">
+          📋 承認ログ <span id="mc-approvallog" style="font-size:10px;font-family:var(--mono);padding:1px 6px;border-radius:8px;background:var(--purple-light);color:var(--purple);margin-left:4px">0</span>
+        </button>
+        <button id="admin-tab-settings" onclick="switchAdminTab('settings')"
+          style="padding:7px 18px;border-radius:8px;border:none;font-size:12px;font-weight:600;font-family:var(--font);cursor:pointer;transition:all .15s;background:transparent;color:var(--text2)">
+          ⚙ 設定
+        </button>
+      </div>
     </div>
     <!-- メンバー管理コンテンツ -->
     <div id="admin-members-content" style="flex:1;overflow-y:auto;background:var(--bg);padding:24px 28px">
-      <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
         <div>
-          <div style="font-size:18px;font-weight:800;letter-spacing:-.5px">👥 メンバー管理</div>
-          <div style="font-size:12px;color:var(--text3);margin-top:3px">メンバーの追加・編集・Googleカレンダー連携の設定</div>
+          <div style="font-size:16px;font-weight:800;color:var(--text);letter-spacing:-.3px">メンバー管理</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">メンバーの追加・編集・カレンダー連携</div>
         </div>
-        <button class="btn btn-primary" onclick="openMemberModal()" style="font-size:12px">＋ メンバーを追加</button>
-      </div>
-      <div style="background:var(--blue-light);border:1px solid #bfdbfe;border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;gap:12px;align-items:flex-start">
-        <div style="font-size:20px;flex-shrink:0">📅</div>
-        <div>
-          <div style="font-size:13px;font-weight:700;color:var(--blue);margin-bottom:4px">Googleカレンダー自動同期について</div>
-          <div style="font-size:12px;color:#1e40af;line-height:1.7">各メンバーにGoogleアカウントとカレンダーIDを設定し、GAS URLを設定するとタスクを自動同期できます。</div>
-        </div>
+        <button onclick="openMemberModal()"
+          style="display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);box-shadow:0 2px 8px rgba(17,24,39,.15);transition:all .15s"
+          onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 12px rgba(17,24,39,.2)'"
+          onmouseout="this.style.transform='';this.style.boxShadow='0 2px 8px rgba(17,24,39,.15)'">
+          ＋ メンバーを追加
+        </button>
       </div>
       <div id="members-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px"></div>
     </div>
@@ -2101,13 +2110,22 @@ function switchAdminTab(tab){
   ['members','log','settings'].forEach(t=>{
     const btn=document.getElementById('admin-tab-'+t);
     const content=document.getElementById('admin-'+t+'-content');
-    if(btn)btn.classList.toggle('active',t===tab);
+    if(btn){
+      if(t===tab){
+        btn.style.background='var(--accent)';
+        btn.style.color='#fff';
+        btn.style.boxShadow='0 1px 4px rgba(0,0,0,.15)';
+      } else {
+        btn.style.background='transparent';
+        btn.style.color='var(--text2)';
+        btn.style.boxShadow='none';
+      }
+    }
     if(content)content.style.display=t===tab?'flex':'none';
   });
   if(tab==='log'){renderLogTable();renderLogStats();}
   if(tab==='members'){renderMembersPanel();}
   if(tab==='settings'){
-    // GAS URLを設定フィールドに反映
     const inp=document.getElementById('settings-gas-url');
     if(inp){const cur=getGasUrl();inp.value=cur==='YOUR_GAS_WEB_APP_URL_HERE'?'':cur;}
     updateGasStatusBadge();
@@ -2816,60 +2834,53 @@ function renderMembersPanel(){
   const badge=document.getElementById('mc-members');
   if(badge)badge.textContent=MEMBERS.length;
   grid.innerHTML=MEMBERS.map(m=>`
-    <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px 20px;box-shadow:var(--shadow-sm);transition:all .15s"
-      onmouseover="this.style.boxShadow='var(--shadow)'" onmouseout="this.style.boxShadow='var(--shadow-sm)'">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
-        <div style="width:46px;height:46px;border-radius:50%;background:${m.color};display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff;flex-shrink:0">${m.initial}</div>
-        <div style="flex:1">
-          <div style="font-size:15px;font-weight:700;color:var(--text)">${m.name}</div>
-
+    <div style="background:#fff;border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06);transition:all .2s"
+      onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,.10)';this.style.transform='translateY(-2px)'"
+      onmouseout="this.style.boxShadow='0 1px 4px rgba(0,0,0,.06)';this.style.transform=''">
+      <!-- カードヘッダー -->
+      <div style="background:linear-gradient(135deg,${m.color}22 0%,${m.color}08 100%);border-bottom:1px solid ${m.color}22;padding:16px 18px;display:flex;align-items:center;gap:12px">
+        <div style="width:48px;height:48px;border-radius:14px;background:${m.color};display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff;flex-shrink:0;box-shadow:0 2px 8px ${m.color}55">${m.initial}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:15px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(m.name)}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;font-family:var(--mono)">${m.email||'メール未設定'}</div>
         </div>
-        <div style="display:flex;gap:5px">
+        <div style="display:flex;gap:4px;flex-shrink:0">
           <button onclick="openMemberModal('${m.id}')"
-            style="font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:#fff;color:var(--text2);cursor:pointer;font-family:var(--font)"
-            onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
-            onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">✏️ 編集</button>
+            style="padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:#fff;color:var(--text2);cursor:pointer;font-size:11px;font-family:var(--font);font-weight:600;transition:all .12s"
+            onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)';this.style.background='var(--accent-light)'"
+            onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)';this.style.background='#fff'">✏️ 編集</button>
           ${MEMBERS.length>1?`<button onclick="deleteMember('${m.id}')"
-            style="font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid #fecaca;background:#fef2f2;color:var(--red);cursor:pointer;font-family:var(--font);font-weight:600"
-            onmouseover="this.style.background='var(--red)';this.style.color='#fff'"
-            onmouseout="this.style.background='#fef2f2';this.style.color='var(--red)'">🗑</button>`:''}
+            style="padding:5px 8px;border-radius:7px;border:1px solid #fecaca;background:#fef2f2;color:var(--red);cursor:pointer;font-size:11px;font-family:var(--font);transition:all .12s"
+            onmouseover="this.style.background='var(--red)';this.style.color='#fff';this.style.borderColor='var(--red)'"
+            onmouseout="this.style.background='#fef2f2';this.style.color='var(--red)';this.style.borderColor='#fecaca'">🗑</button>`:''}
         </div>
       </div>
-      <!-- タスク件数 -->
-      <div style="display:flex;gap:8px;margin-bottom:14px">
-        <div style="flex:1;text-align:center;padding:8px;background:var(--surface2);border-radius:7px;border:1px solid var(--border)">
-          <div style="font-size:18px;font-weight:800;font-family:var(--mono);color:var(--text)">${tasks.filter(t=>t.assignee===m.id&&t.status!=='done').length}</div>
-          <div style="font-size:10px;color:var(--text3)">未完了</div>
+      <!-- タスク統計 -->
+      <div style="padding:14px 18px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;border-bottom:1px solid var(--border)">
+        <div style="text-align:center;padding:10px 6px;border-radius:10px;background:var(--surface2)">
+          <div style="font-size:20px;font-weight:800;font-family:var(--mono);color:var(--text);line-height:1">${tasks.filter(t=>t.assignee===m.id&&t.status!=='done').length}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:3px">未完了</div>
         </div>
-        <div style="flex:1;text-align:center;padding:8px;background:var(--surface2);border-radius:7px;border:1px solid var(--border)">
-          <div style="font-size:18px;font-weight:800;font-family:var(--mono);color:var(--green)">${tasks.filter(t=>t.assignee===m.id&&t.status==='done').length}</div>
-          <div style="font-size:10px;color:var(--text3)">完了済み</div>
+        <div style="text-align:center;padding:10px 6px;border-radius:10px;background:#f0fdf4">
+          <div style="font-size:20px;font-weight:800;font-family:var(--mono);color:var(--green);line-height:1">${tasks.filter(t=>t.assignee===m.id&&t.status==='done').length}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:3px">完了済み</div>
         </div>
-        <div style="flex:1;text-align:center;padding:8px;background:var(--surface2);border-radius:7px;border:1px solid var(--border)">
-          <div style="font-size:18px;font-weight:800;font-family:var(--mono);color:var(--red)">${tasks.filter(t=>t.assignee===m.id&&t.status!=='done'&&t.due&&t.due<fmt(T)).length}</div>
-          <div style="font-size:10px;color:var(--text3)">期限超過</div>
+        <div style="text-align:center;padding:10px 6px;border-radius:10px;background:#fef2f2">
+          <div style="font-size:20px;font-weight:800;font-family:var(--mono);color:var(--red);line-height:1">${tasks.filter(t=>t.assignee===m.id&&t.status!=='done'&&t.due&&t.due<fmt(T)).length}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:3px">期限超過</div>
         </div>
       </div>
-      <!-- Googleカレンダー連携状態 -->
-      <div style="border-top:1px solid var(--border);padding-top:12px">
-        <div style="font-size:10px;font-family:var(--mono);font-weight:700;letter-spacing:1px;color:var(--text3);text-transform:uppercase;margin-bottom:8px">📅 カレンダー連携</div>
+      <!-- カレンダー連携 -->
+      <div style="padding:12px 18px">
         ${m.email?`
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
-            <span style="font-size:11px;color:var(--text2)">📧</span>
-            <span style="font-size:12px;color:var(--text);font-family:var(--mono)">${m.email}</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
-            <span style="font-size:11px;color:var(--text2)">🗓</span>
-            <span style="font-size:11px;color:var(--text3);font-family:var(--mono)">${m.calendarId||'primary'}</span>
-          </div>
           <button onclick="syncMemberCalendar('${m.id}')"
-            style="width:100%;padding:7px;border-radius:7px;border:1px solid var(--green);background:var(--green-light);color:var(--green);cursor:pointer;font-size:12px;font-weight:600;font-family:var(--font);transition:all .12s"
-            onmouseover="this.style.background='var(--green)';this.style.color='#fff'"
-            onmouseout="this.style.background='var(--green-light)';this.style.color='var(--green)'">
-            🔄 このメンバーのタスクを同期
+            style="width:100%;padding:9px;border-radius:9px;border:none;background:linear-gradient(135deg,var(--green) 0%,#059669 100%);color:#fff;cursor:pointer;font-size:12px;font-weight:700;font-family:var(--font);transition:all .15s;box-shadow:0 2px 6px rgba(5,150,105,.3)"
+            onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 12px rgba(5,150,105,.4)'"
+            onmouseout="this.style.transform='';this.style.boxShadow='0 2px 6px rgba(5,150,105,.3)'">
+            🔄 カレンダーと同期
           </button>`:`
-          <div style="font-size:12px;color:var(--text3);padding:8px 0">
-            Googleアカウントが未設定です。「編集」から設定してください。
+          <div style="text-align:center;padding:8px;font-size:11px;color:var(--text3);background:var(--surface2);border-radius:8px">
+            📧 メール未設定 — 編集から設定してください
           </div>`}
       </div>
     </div>`).join('');
