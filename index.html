@@ -5554,8 +5554,9 @@ function toggleTableSort(col){
 }
 
 function toggleTableExpand(id){
-  if(tableExpandedIds.has(id)) tableExpandedIds.delete(id);
-  else tableExpandedIds.add(id);
+  const sid = String(id);
+  if(tableExpandedIds.has(sid)) tableExpandedIds.delete(sid);
+  else tableExpandedIds.add(sid);
   renderTasks();
 }
 
@@ -5811,7 +5812,7 @@ function renderTaskTable(list){
             let subs = (t.subtasks||[]);
             if(statusFilt!=='all') subs = subs.filter(s=>s.status===statusFilt);
             // 親タスクが展開中かどうか
-            const isExpanded = tableExpandedIds.has(t.id);
+            const isExpanded = tableExpandedIds.has(String(t.id));
             const parentRow = taskRow(t, i, false, subs.length>0, isExpanded);
             const subRows = isExpanded ? subs.map(s => taskRow(s, i, true)).join('') : '';
             return parentRow + subRows;
