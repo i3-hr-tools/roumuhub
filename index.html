@@ -3635,9 +3635,12 @@ function _saveAnnualLocal(){ localStorage.setItem('annual_projects', JSON.string
 function scheduleAutoSync() {
   if (!isGasEnabled()) return;
   if (_isSyncing) return;
+  // トークンが未取得の場合はスキップ（ログイン直後の誤同期防止）
+  if (!gAccessToken) return;
   clearTimeout(_autoSyncTimer);
   _autoSyncTimer = setTimeout(async () => {
     if (_isSyncing) return;
+    if (!gAccessToken) return; // タイマー実行時も再チェック
     // 直近2.5秒以内に別の同期が完了していれば重複送信を回避
     if (Date.now() - _lastUploadTs < 2500) return;
     _autoSyncTimer = null; // タイマークリア
