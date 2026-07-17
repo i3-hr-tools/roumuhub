@@ -5974,7 +5974,7 @@ function cardHTML(t){
     <div class="quick-edit-bar" id="qe-${t.id}" onclick="event.stopPropagation()">
       <div class="qe-group">
         <span class="qe-label">期限日</span>
-        <input class="qe-input" id="qe-due-${t.id}" type="datetime-local" value="${t.due||''}" style="width:140px">
+        <input class="qe-input" id="qe-due-${t.id}" type="datetime-local" value="${(t.due&&t.due.length>=16)?t.due.slice(0,16):''}" style="width:140px">
       </div>
       <div class="qe-group">
         <span class="qe-label">担当者</span>
@@ -6045,7 +6045,7 @@ function stRowHTML(parentId,s){
     </div>
     <!-- クイック編集バー -->
     <div class="st-qe-bar" id="st-qe-${parentId}-${s.id}">
-      <div><span class="st-qe-label">開始日</span><input class="st-qe-input" id="stqe-start-${parentId}-${s.id}" type="datetime-local" value="${s.start||''}" style="width:130px"></div>
+      <div><span class="st-qe-label">開始日</span><input class="st-qe-input" id="stqe-start-${parentId}-${s.id}" type="datetime-local" value="${(s.start&&s.start.length>=16)?s.start.slice(0,16):''}" style="width:130px"></div>
       <div><span class="st-qe-label">期限日</span><input class="st-qe-input" id="stqe-due-${parentId}-${s.id}" type="datetime-local" value="${(s.due&&s.due.length>=16)?s.due.slice(0,16):''}" style="width:130px"></div>
       <div><span class="st-qe-label">担当者</span>
         <select class="st-qe-input" id="stqe-assignee-${parentId}-${s.id}" style="width:110px">
