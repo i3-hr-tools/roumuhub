@@ -3446,11 +3446,11 @@ function openEditLinkModal(id){
 }
 
 function saveLink(){
-  const name=document.getElementById('leave-name').value.trim();
+  const name=document.getElementById('lm-name').value.trim();
   const url=document.getElementById('lm-url').value.trim();
   if(!name||!url){toast('⚠ サービス名とURLは必須です',true);return;}
   const editId=document.getElementById('leave-edit-id').value;
-  const vals={name,url,cat:document.getElementById('lm-cat').value,note:document.getElementById('leave-note').value.trim(),icon:document.getElementById('lm-icon').value.trim()||'🔗'};
+  const vals={name,url,cat:document.getElementById('lm-cat').value,note:document.getElementById('lm-note').value.trim(),icon:document.getElementById('lm-icon').value.trim()||'🔗'};
   if(editId){
     const l=linkItems.find(l=>l.id===editId);if(l)Object.assign(l,vals);
   } else {
