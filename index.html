@@ -5370,7 +5370,7 @@ function showTaskDetail(id){
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <span style="font-size:11px;font-family:var(--mono);color:var(--text3)">#${t.id}</span>
       <div style="display:flex;gap:5px">
-        <button onclick="editTask(event,${t.id})" class="btn btn-ghost" style="font-size:11px;padding:4px 8px">✏️ 編集</button>
+        <button onclick="editTask(event,'${t.id}')" class="btn btn-ghost" style="font-size:11px;padding:4px 8px">✏️ 編集</button>
         <button onclick="closeTaskDetail()" style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--text3);padding:2px 4px" title="閉じる">✕</button>
       </div>
     </div>
@@ -5709,10 +5709,10 @@ function renderTaskTable(list){
       </td>
       <td style="padding:6px 8px;white-space:nowrap;text-align:center">
         ${!isChild?`<div style="display:flex;gap:3px;justify-content:center">
-          <button onclick="editTask(event,${t.id})" style="font-size:11px;padding:3px 7px;border-radius:5px;border:1px solid var(--border);background:#fff;color:var(--text2);cursor:pointer"
+          <button onclick="editTask(event,'${t.id}')" style="font-size:11px;padding:3px 7px;border-radius:5px;border:1px solid var(--border);background:#fff;color:var(--text2);cursor:pointer"
             onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
             onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">✏️</button>
-          <button onclick="delTask(event,${t.id})" style="font-size:11px;padding:3px 7px;border-radius:5px;border:1px solid #fecaca;background:#fef2f2;color:var(--red);cursor:pointer"
+          <button onclick="delTask(event,'${t.id}')" style="font-size:11px;padding:3px 7px;border-radius:5px;border:1px solid #fecaca;background:#fef2f2;color:var(--red);cursor:pointer"
             onmouseover="this.style.background='var(--red)';this.style.color='#fff'"
             onmouseout="this.style.background='#fef2f2';this.style.color='var(--red)'">🗑</button>
         </div>`:''}
@@ -5921,7 +5921,7 @@ function cardHTML(t){
       </div>
     </div>`;
   return `<div class="task-card status-${t.status}" id="card-${t.id}"
-    onclick="toggleCard(${t.id},event)"
+    onclick="toggleCard('${t.id}',event)"
     onkeydown="handleCardKey(event,${t.id})">
     <div class="task-card-top">
       <!-- チェックボックス -->
@@ -5932,7 +5932,7 @@ function cardHTML(t){
       </div>
       <div class="task-body">
         <div class="task-title" id="title-wrap-${t.id}">
-          <span id="arrow-${t.id}" onclick="event.stopPropagation();expandCard(${t.id})" style="font-size:11px;color:var(--text3);margin-right:5px;display:inline-block;transition:transform .2s;cursor:pointer;padding:2px 4px;border-radius:3px" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='transparent'" title="子タスクを展開">▶</span>
+          <span id="arrow-${t.id}" onclick="event.stopPropagation();expandCard('${t.id}')" style="font-size:11px;color:var(--text3);margin-right:5px;display:inline-block;transition:transform .2s;cursor:pointer;padding:2px 4px;border-radius:3px" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='transparent'" title="子タスクを展開">▶</span>
           <span id="title-text-${t.id}" ondblclick="startInlineEdit(event,${t.id})" title="ダブルクリックでタイトル編集" style="cursor:text">${escHtml(t.title)}</span>
           ${t.private?'<span style="font-size:10px;padding:1px 5px;border-radius:5px;background:#f1f5f9;color:#64748b;border:1px solid #cbd5e1;margin-left:4px">🔒 個人</span>':''}
           ${subs.length?`<span style="font-size:10px;font-family:var(--mono);font-weight:600;padding:1px 7px;border-radius:10px;margin-left:6px;background:${doneCount===subs.length&&subs.length>0?'var(--accent-light)':'var(--surface2)'};color:${doneCount===subs.length&&subs.length>0?'var(--accent)':'var(--text3)'}">${doneCount}/${subs.length}</span>`:''}
@@ -5950,7 +5950,7 @@ function cardHTML(t){
         <div class="assignee-row">
           ${member?`<div class="assignee-chip"><div class="assignee-dot" style="background:${escHtml(member.color)}"></div>${escHtml(member.name)}</div>`:'<div class="assignee-chip">未割り当て</div>'}
           ${approver?`<div class="assignee-chip" style="background:var(--purple-light);color:var(--purple)">承認: ${escHtml(approver.name)}</div>`:''}
-          ${t.note?`<span onclick="event.stopPropagation();toggleCardNote(${t.id})" ondblclick="event.stopPropagation();editTask(event,${t.id})" title="クリックでメモ全文 / ダブルクリックで編集" style="font-size:10px;color:var(--text3);cursor:pointer" id="note-chip-${t.id}">📝 <span id="note-text-${t.id}">${escHtml(t.note.slice(0,25))}${t.note.length>25?'…':''}</span></span>`:''}
+          ${t.note?`<span onclick="event.stopPropagation();toggleCardNote('${t.id}')" ondblclick="event.stopPropagation();editTask(event,'${t.id}')" title="クリックでメモ全文 / ダブルクリックで編集" style="font-size:10px;color:var(--text3);cursor:pointer" id="note-chip-${t.id}">📝 <span id="note-text-${t.id}">${escHtml(t.note.slice(0,25))}${t.note.length>25?'…':''}</span></span>`:''}
         </div>
       </div>
       <div class="task-actions" onclick="event.stopPropagation()">
@@ -5966,7 +5966,7 @@ function cardHTML(t){
         <button class="icon-btn" onclick="quickEditToggle(event,${t.id})" title="クイック編集（期限・担当者）" style="font-size:13px">⚡</button>
         <button class="icon-btn" onclick="enterSelectMode(event,${t.id},'copy')" title="複製">📋</button>
         <button class="icon-btn" onclick="event.stopPropagation();openCommentModal(${t.id})" title="コメント" style="position:relative">💬${(t.comments||[]).length?`<span style="position:absolute;top:-3px;right:-3px;min-width:14px;height:14px;border-radius:7px;background:var(--accent);color:#fff;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 2px">${(t.comments||[]).length}</span>`:''}</button>
-        <button class="icon-btn" onclick="editTask(event,${t.id})" title="編集">✏️</button>
+        <button class="icon-btn" onclick="editTask(event,'${t.id}')" title="編集">✏️</button>
         <button class="icon-btn" onclick="enterSelectMode(event,${t.id},'delete')" title="削除">🗑</button>
       </div>
     </div>
@@ -6878,8 +6878,8 @@ function renderApprovals(){
       onclick="toggleApprovalDetail(${t.id})">
       <div style="display:flex;align-items:center;gap:8px">
         <div style="flex:1;font-size:12px;font-weight:600;color:var(--text)">${escHtml(t.title)}</div>
-        <button class="appr-btn ok" onclick="event.stopPropagation();approve(${t.id},true)">✓ 承認</button>
-        <button class="appr-btn ng" onclick="event.stopPropagation();approve(${t.id},false)">✕ 差戻</button>
+        <button class="appr-btn ok" onclick="event.stopPropagation();approve('${t.id}',true)">✓ 承認</button>
+        <button class="appr-btn ng" onclick="event.stopPropagation();approve('${t.id}',false)">✕ 差戻</button>
       </div>
       <!-- 詳細エリア（初期非表示） -->
       <div id="appr-detail-${t.id}" style="display:none;margin-top:8px;padding:8px 10px;background:var(--surface2);border-radius:6px;border:1px solid var(--border)">
@@ -9774,7 +9774,7 @@ function renderTemplateList(){
               <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">📅 ${dueDesc}</span>
               <span style="font-size:10px;padding:1px 6px;border-radius:6px;background:${ (t.freq||'monthly')==='monthly'?'#dbeafe':(t.freq==='yearly'?'#dcfce7':'#fef3c7') };color:${ (t.freq||'monthly')==='monthly'?'#1d4ed8':(t.freq==='yearly'?'#166534':'#92400e') };border:1px solid ${ (t.freq||'monthly')==='monthly'?'#bfdbfe':(t.freq==='yearly'?'#bbf7d0':'#fde68a') }">${ (t.freq||'monthly')==='monthly'?'📅 月次':(t.freq==='yearly'?'📆 年次':'⚡ イレギュラー') }</span>
               ${member?`<span style="font-size:10px;color:var(--text2)">👤 ${member.name}</span>`:''}
-              ${t.note?`<span onclick='event.stopPropagation();toggleCardNote(${t.id})' id='note-chip-${t.id}' style='font-size:10px;color:var(--text3);cursor:pointer;padding:1px 6px;border-radius:4px;background:var(--surface2);border:1px solid var(--border);display:inline-flex;align-items:center;gap:3px' title='クリックでメモを展開'>📝 <span id='note-text-${t.id}' style='max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:bottom'>${t.note.slice(0,20)}${t.note.length>20?'…':''}</span> <span id='note-arr-${t.id}'>▾</span></span><div id='note-exp-${t.id}' style='display:none'></div>`:''}
+              ${t.note?`<span onclick='event.stopPropagation();toggleCardNote("${t.id}")' id='note-chip-${t.id}' style='font-size:10px;color:var(--text3);cursor:pointer;padding:1px 6px;border-radius:4px;background:var(--surface2);border:1px solid var(--border);display:inline-flex;align-items:center;gap:3px' title='クリックでメモを展開'>📝 <span id='note-text-${t.id}' style='max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:bottom'>${t.note.slice(0,20)}${t.note.length>20?'…':''}</span> <span id='note-arr-${t.id}'>▾</span></span><div id='note-exp-${t.id}' style='display:none'></div>`:''}
               ${(t.subtasks||[]).length?`<span style="font-size:10px;color:var(--text3)">🔸 子${(t.subtasks||[]).length}件</span>`:''}
             </div>
           </div>
