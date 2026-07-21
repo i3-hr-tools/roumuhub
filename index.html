@@ -4402,7 +4402,7 @@ function bulkDuplicate(){
   const newTasks = ids.map(id => {
     const t = tasks.find(t=>String(t.id)===String(id));
     if(!t) return null;
-    return { ...t, id: String(Date.now())+String(Math.random()).slice(2,7), title: t.title+' (コピー)', status:'todo', comments:[], files:[] };
+    return JSON.parse(JSON.stringify({ ...t, id: 'task_'+String(Date.now())+'_'+Math.random().toString(36).substring(2,9), title: t.title+' (コピー)', status:'todo', comments:[], files:[] }));
   }).filter(Boolean);
   tasks.push(...newTasks);
   saveTasks(); renderAll();
@@ -9244,7 +9244,8 @@ function copyTask(e,id){
     isPriv = true;
   }
   if(!src) return;
-  const newTask = {...src, id:String(Date.now()), title:src.title+' (コピー)', status:'todo', comments:[], files:[]};
+  // JSON.parse/stringifyでディープコピー（ネスト参照を完全分離）
+  const newTask = JSON.parse(JSON.stringify({...src, id:'task_'+String(Date.now())+'_'+Math.random().toString(36).substring(2,9), title:src.title+' (コピー)', status:'todo', comments:[], files:[]}));
   if(isPriv){
     priv.push(newTask);
     savePrivateTasks(priv);
@@ -9344,7 +9345,7 @@ function delTask(e,id){
     const member=MEMBERS.find(m=>m.id===t.assignee);
     if(member&&member.email) autoDeleteTaskFromCalendar(id, t.title, member);
   }
-  tasks=tasks.filter(t=>t.id!==id);saveTasks();renderAll();toast('🗑 削除しました');
+  tasks=tasks.filter(t=>String(t.id)!==String(id));saveTasks();renderAll();toast('🗑 削除しました');
   if(isGasEnabled()) immediateSync();
 }
 
