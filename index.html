@@ -4263,7 +4263,7 @@ function renderCatTabCounts(){
   // チームタスク＋個人タスク（自分のもの）を集計対象に統一
   const privTasks = currentUser ? getPrivateTasks() : [];
   const allTasks = [...tasks, ...privTasks].filter(t =>
-    !t.private || (currentUser && t.assignee === currentUser.id)
+    !t.private || (currentUser && (t.assignee === currentUser.id || t.assignee===''||!t.assignee))
   );
   const pending = allTasks.filter(t=>t.status!=='done');
   document.getElementById('mc-all').textContent=pending.length;
@@ -4302,7 +4302,7 @@ function renderStats(){
   } else {
     // チームビュー：チーム＋個人（privateは自分のもののみ）
     const all = [...tasks, ...privTasks];
-    base = all.filter(t => !t.private || (currentUser && t.assignee === currentUser.id));
+    base = all.filter(t => !t.private || (currentUser && (t.assignee === currentUser.id || t.assignee===''||!t.assignee)));
   }
 
   const pending = base.filter(t => t.status !== 'done');
@@ -5806,7 +5806,7 @@ function renderTasks(){
   );
   // チームビューではtasks内のprivateタスクを非表示（自分のもののみ表示）
   if(viewMode==='team'){
-    list = list.filter(t => !t.private || (currentUser && t.assignee===currentUser.id));
+    list = list.filter(t => !t.private || (currentUser && (t.assignee===currentUser.id || t.assignee===''||!t.assignee)));
   }
   const ts=fmt(T);
   const {start:wkStart, end:wkEnd} = getThisWeekRange();
