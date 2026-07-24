@@ -1550,6 +1550,29 @@ const LOGIN_SCOPES = 'email profile';
 
 let gTokenClient = null;
 let gAccessToken = null;
+let _tokenExpireAt = 0; // トークン有効期限（Unixタイムスタンプ・ミリ秒）
+
+// トークンが期限切れ（または5分以内に期限）かチェック
+function isTokenExpired() {
+  return !gAccessToken || Date.now() > _tokenExpireAt - 5 * 60 * 1000;
+}
+
+// トークンをサイレントに自動更新する
+async function refreshTokenSilently() {
+  if (!gTokenClient) return;
+  return new Promise((resolve) => {
+    const prevCallback = gTokenClient.callback;
+    gTokenClient.callback = (tokenResponse) => {
+      if (!tokenResponse.error) {
+        gAccessToken = tokenResponse.access_token;
+        _tokenExpireAt = Date.now() + (tokenResponse.expires_in || 3600) * 1000;
+      }
+      gTokenClient.callback = prevCallback;
+      resolve();
+    };
+    gTokenClient.requestAccessToken({ prompt: '' }); // promptなし＝サイレント更新
+  });
+}
 
 // ── Google Identity Services 初期化 ──
 function initGoogleAuth() {
@@ -1594,6 +1617,7 @@ function handleGoogleLoginForApp() {
       return;
     }
     gAccessToken = tokenResponse.access_token;
+    _tokenExpireAt = Date.now() + ((tokenResponse.expires_in || 3600) * 1000);
     await completeAppLogin();
   };
   document.getElementById('login-step-google').style.display = 'none';
@@ -3660,6 +3684,10 @@ async function immediateSync() {
 // ── 実際のアップロード処理（共通）──
 async function _doUpload() {
   if (_isSyncing) return;
+  // トークン期限チェック → 期限切れなら自動更新
+  if (isGasEnabled() && isTokenExpired()) {
+    try { await refreshTokenSilently(); } catch(e) {}
+  }
   _isSyncing = true;
   setSyncStatus('💾 保存中...');
   try {
