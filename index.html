@@ -6986,7 +6986,11 @@ function renderCal(){
   const dows=['日','月','火','水','木','金','土'];
   let h=dows.map(d=>`<div class="cal-dow">${d}</div>`).join('');
   const first=new Date(cy,cm,1).getDay(),last=new Date(cy,cm+1,0).getDate();
-  const tDays=new Set(tasks.filter(t=>t.status!=='done'&&t.due&&t.due.startsWith(`${cy}-${pad(cm+1)}`)).map(t=>parseInt(t.due.split('-')[2])));
+  // チームタスク＋個人タスク（自分のもの）の期限日に●を表示
+  const _allCalTasks = [...tasks, ...(currentUser?getPrivateTasks():[])].filter(t=>
+    !t.private || (currentUser && (t.assignee===currentUser.id||t.assignee===''||!t.assignee))
+  );
+  const tDays=new Set(_allCalTasks.filter(t=>t.status!=='done'&&t.due&&t.due.startsWith(`${cy}-${pad(cm+1)}`)).map(t=>parseInt(t.due.split('-')[2])));
   for(let i=0;i<first;i++)h+='<div class="cal-day empty"></div>';
   for(let d=1;d<=last;d++){
     const ds=`${cy}-${pad(cm+1)}-${pad(d)}`,isT=ds===fmt(T),isH=HOL.includes(ds),dow=(first+d-1)%7;
@@ -7006,7 +7010,11 @@ function dayClick(dateStr){
   // ナビアイテムのactiveを更新
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   // タスクを絞り込んで表示
-  const dayTasks=tasks.filter(t=>t.status!=='done'&&t.due===dateStr);
+  // チームタスク＋個人タスク（自分のもの）を対象に絞り込み
+  const _allDayTasks = [...tasks, ...(currentUser?getPrivateTasks():[])].filter(t=>
+    !t.private || (currentUser && (t.assignee===currentUser.id||t.assignee===''||!t.assignee))
+  );
+  const dayTasks=_allDayTasks.filter(t=>t.status!=='done'&&t.due&&t.due.startsWith(dateStr));
   const label=isToday?'今日期限のタスク':`${dateStr.replace(/-/g,'/')} のタスク`;
   document.getElementById('task-container').innerHTML=
     dayTasks.length
